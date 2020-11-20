@@ -1,3 +1,18 @@
+#! /usr/bin/env python
+
+"""
+
+Welcome to Autonomous Lane Merging using CARLA Simulator
+
+This work is part of the 'Autonomous Lane Merging using Reinforcement Learning'
+project, authored by Anand Gokul (Github: @anandgokul18) and Ashwini Raja (Github: ashwini-raja)
+
+License: MIT Open License (https://opensource.org/licenses/MIT)
+Year: 2020
+Carla Version: 0.9.5 (Code may need changes in future versions of CARLA. Provided as is, no warranties provided :x)
+
+"""
+
 import glob
 import os
 import sys
