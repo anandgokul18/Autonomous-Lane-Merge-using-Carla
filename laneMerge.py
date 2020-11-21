@@ -37,6 +37,35 @@ IM_WIDTH = 640
 IM_HEIGHT = 480
 
 
+def step(vehicle, action):
+    # moving straight
+    if action == 0:
+        vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0))
+    # moving left
+    if action == 1:
+        vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=-1))
+    # moving right
+    if action == 2:
+        vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=1))
+    v = vehicle.get_velocity()
+    kmh = int(3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2))
+
+    if len(self.collision_hist) != 0:
+        done = True
+        reward = -200
+    elif kmh < 50:
+        done = False
+        reward = -1
+    else:
+        done = False
+        reward = 1
+
+    if self.episode_start + SECONDS_PER_EPISODE < time.time():
+        done = True
+
+    return self.front_camera, reward, done, None
+
+
 def process_img(image):
     # convert the raw_data to an array
     i = np.array(image.raw_data)
@@ -53,6 +82,9 @@ def process_img(image):
 
 # These will be the actors whcih will be needed for the list. Used for both init and cleanup
 actor_list = []
+
+# Collision history of the ego vehicle
+collision_history = []
 
 try:
     # We need to ensure the delay factors if using non-local servers, say on another machine dedicated to training.
