@@ -16,7 +16,6 @@ Carla Version: 0.9.5 (Code may need changes in future versions of CARLA. Provide
 import glob
 import os
 import sys
-import random
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -27,6 +26,30 @@ except IndexError:
     pass
 
 import carla
+
+import random
+import time
+import numpy as np
+import cv2  # opencv-python
+
+
+IM_WIDTH = 640
+IM_HEIGHT = 480
+
+
+def process_img(image):
+    # convert the raw_data to an array
+    i = np.array(image.raw_data)
+    # was flattened, so we're going to shape it.
+    i2 = i.reshape((IM_HEIGHT, IM_WIDTH, 4))
+    # remove the alpha (basically, remove the 4th index  of every pixel. Converting RGBA to RGB)
+    i3 = i2[:, :, :3]
+    # show it.
+    cv2.imshow("", i3)
+    cv2.waitKey(1)
+    # normalize
+    return i3/255.0
+
 
 # These will be the actors whcih will be needed for the list. Used for both init and cleanup
 actor_list = []
@@ -55,8 +78,14 @@ try:
     # random spawn_point: spawn_point = random.choice(world.get_map().get_spawn_points())
     # Choosing desired spawn point based on x,y and z in map
     # NOTE: Need to change this so that the car spawns on the on-ramp
-    spawn_point = carla.Transform(carla.Location(
+    spawn_point1 = carla.Transform(carla.Location(
         205.1, -318.8, 0), carla.Rotation(0, -89, 0))
+
+    spawn_point2 = carla.Transform(carla.Location(
+        129.4, -69.5, 6), carla.Rotation(0, 89, 0))
+
+    # Choosing one of the 2 on-ramp spawn points randomly
+    spawn_point = random.choice([spawn_point1, spawn_point2])
 
     # Spawining the Ego car actor
     vehicle = world.spawn_actor(bp, spawn_point)
@@ -67,6 +96,29 @@ try:
 
     # Adding our ego car to list of actors to cleanup
     actor_list.append(vehicle)
+
+    # Adding Camera Sensor
+    cam_bp = blueprint_library.find('sensor.camera.rgb')
+
+    # change the dimensions of the image and field of view to be specific for the neural network
+    cam_bp.set_attribute('image_size_x', f'{IM_WIDTH}')
+    cam_bp.set_attribute('image_size_y', f'{IM_HEIGHT}')
+    cam_bp.set_attribute('fov', '110')
+
+    # Adjust sensor relative to the ego vehicle. x is forward, y is left/right, z is up/down
+    spawn_point = carla.Transform(carla.Location(x=2.5, z=0.7))
+
+    # spawn the sensor and attach to vehicle.
+    sensor = world.spawn_actor(cam_bp, spawn_point, attach_to=vehicle)
+
+    # add sensor to list of actors
+    actor_list.append(sensor)
+
+    # Get the actual data from the sensor and preprocess the data using lambda function
+    sensor.listen(lambda data: process_img(data))
+
+    # 5 sec training
+    time.sleep(5)
 
 finally:
     for actor in actor_list:
