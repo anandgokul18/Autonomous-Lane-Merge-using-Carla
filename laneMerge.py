@@ -16,6 +16,7 @@ Carla Version: 0.9.5 (Code may need changes in future versions of CARLA. Provide
 import glob
 import os
 import sys
+import random
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -44,6 +45,28 @@ try:
     world = client.load_world('Town04')
 
     blueprint_library = world.get_blueprint_library()
+
+    # Loading a Tesla Model 3 as the Ego car
+    bp = blueprint_library.filter("model3")[0]
+
+    # Choosing the spawn point for the ego car
+    # Carla comes with ~200 spawn points.
+    # List of spawn_points: = world.get_map().get_spawn_points()
+    # random spawn_point: spawn_point = random.choice(world.get_map().get_spawn_points())
+    # Choosing desired spawn point based on x,y and z in map
+    # NOTE: Need to change this so that the car spawns on the on-ramp
+    spawn_point = carla.Transform(carla.Location(
+        205.1, -318.8, 0), carla.Rotation(0, -89, 0))
+
+    # Spawining the Ego car actor
+    vehicle = world.spawn_actor(bp, spawn_point)
+
+    # Control the car.
+    # For now, just go straight at full throttle
+    vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0.0))
+
+    # Adding our ego car to list of actors to cleanup
+    actor_list.append(vehicle)
 
 finally:
     for actor in actor_list:
