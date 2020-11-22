@@ -30,8 +30,8 @@ class CarEnv:
     front_camera = None
 
     def __init__(self):
-        self.client = carla.Client("localhost", 2000)
-        self.client.set_timeout(2.0)
+        self.client = carla.Client("127.0.0.1", 2000)
+        self.client.set_timeout(60.0)
         self.world = self.client.get_world()
         self.blueprint_library = self.world.get_blueprint_library()
         self.model_3 = self.blueprint_library.filter("model3")[0]
