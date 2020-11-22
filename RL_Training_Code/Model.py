@@ -24,7 +24,7 @@ from Environment import *
 SHOW_PREVIEW = False
 IM_WIDTH = 640
 IM_HEIGHT = 480
-SECONDS_PER_EPISODE = 10
+
 REPLAY_MEMORY_SIZE = 5_000
 MIN_REPLAY_MEMORY_SIZE = 1_000
 MINIBATCH_SIZE = 16
@@ -40,7 +40,7 @@ EPISODES = 100
 
 DISCOUNT = 0.99
 epsilon = 1
-EPSILON_DECAY = 0.95 ## 0.9975 99975
+EPSILON_DECAY = 0.95  # 0.9975 99975
 MIN_EPSILON = 0.001
 
 AGGREGATE_STATS_EVERY = 10
@@ -79,6 +79,7 @@ class ModifiedTensorBoard(TensorBoard):
     def update_stats(self, **stats):
         self._write_logs(stats, self.step)
 
+
 class DQNAgent:
     def __init__(self):
         self.model = self.create_model()
@@ -87,7 +88,8 @@ class DQNAgent:
 
         self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
 
-        self.tensorboard = ModifiedTensorBoard(log_dir=f"logs/{MODEL_NAME}-{int(time.time())}")
+        self.tensorboard = ModifiedTensorBoard(
+            log_dir=f"logs/{MODEL_NAME}-{int(time.time())}")
         self.target_update_counter = 0
         self.graph = tf.compat.v1.get_default_graph()
 
@@ -99,14 +101,16 @@ class DQNAgent:
 
         IM_WIDTH = 640
         IM_HEIGHT = 480
-        base_model = Xception(weights=None, include_top=False, input_shape=(IM_HEIGHT, IM_WIDTH,3))
+        base_model = Xception(weights=None, include_top=False,
+                              input_shape=(IM_HEIGHT, IM_WIDTH, 3))
 
         x = base_model.output
         x = GlobalAveragePooling2D()(x)
 
         predictions = Dense(3, activation="linear")(x)
         model = Model(inputs=base_model.input, outputs=predictions)
-        model.compile(loss="mse", optimizer=Adam(lr=0.001), metrics=["accuracy"])
+        model.compile(loss="mse", optimizer=Adam(
+            lr=0.001), metrics=["accuracy"])
         return model
 
     def update_replay_memory(self, transition):
@@ -119,13 +123,17 @@ class DQNAgent:
 
         minibatch = random.sample(self.replay_memory, MINIBATCH_SIZE)
 
-        current_states = np.array([transition[0] for transition in minibatch])/255
+        current_states = np.array([transition[0]
+                                   for transition in minibatch])/255
         with self.graph.as_default():
-            current_qs_list = self.model.predict(current_states, PREDICTION_BATCH_SIZE)
+            current_qs_list = self.model.predict(
+                current_states, PREDICTION_BATCH_SIZE)
 
-        new_current_states = np.array([transition[3] for transition in minibatch])/255
+        new_current_states = np.array(
+            [transition[3] for transition in minibatch])/255
         with self.graph.as_default():
-            future_qs_list = self.target_model.predict(new_current_states, PREDICTION_BATCH_SIZE)
+            future_qs_list = self.target_model.predict(
+                new_current_states, PREDICTION_BATCH_SIZE)
 
         X = []
         y = []
@@ -149,8 +157,8 @@ class DQNAgent:
             self.last_log_episode = self.tensorboard.step
 
         with self.graph.as_default():
-            self.model.fit(np.array(X)/255, np.array(y), batch_size=TRAINING_BATCH_SIZE, verbose=0, shuffle=False, callbacks=[self.tensorboard] if log_this_step else None)
-
+            self.model.fit(np.array(X)/255, np.array(y), batch_size=TRAINING_BATCH_SIZE,
+                           verbose=0, shuffle=False, callbacks=[self.tensorboard] if log_this_step else None)
 
         if log_this_step:
             self.target_update_counter += 1
@@ -163,10 +171,11 @@ class DQNAgent:
         return self.model.predict(np.array(state).reshape(-1, *state.shape)/255)[0]
 
     def train_in_loop(self):
-        X = np.random.uniform(size=(1, IM_HEIGHT, IM_WIDTH, 3)).astype(np.float32)
+        X = np.random.uniform(
+            size=(1, IM_HEIGHT, IM_WIDTH, 3)).astype(np.float32)
         y = np.random.uniform(size=(1, 3)).astype(np.float32)
         with self.graph.as_default():
-            self.model.fit(X,y, verbose=False, batch_size=1)
+            self.model.fit(X, y, verbose=False, batch_size=1)
 
         self.training_initialized = True
 

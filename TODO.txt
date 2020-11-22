@@ -20,11 +20,11 @@ Environment.py Changes:
 
 3. [TRY] See if we should incentivize lane change (bad idea), but, if we do, how do we counter balance it so that the car doesn't swerve around!?
 
-4. Add the spawn point of the car as the location in the laneMerge.py's spawnpoint3
+4. [DONE] Add the spawn point of the car as the location in the laneMerge.py's spawnpoint3
 
-5. Add 'SECONDS_PER_EPISODE' variable at top for '100' seconds (int)
+5. [DONE] Add 'SECONDS_PER_EPISODE' variable at top for '100' seconds (int)
 
-6. Should we add 2 more actions- turn left @ 0.5 throttle and turn right @ 0.5 throttle??? Currently, it has straight, full throttle left and full throttle right... Think it will be good to allow the car to do smaller left and right turns....!
+6. [DONE] Should we add 2 more actions- turn left @ 0.5 throttle and turn right @ 0.5 throttle??? Currently, it has straight, full throttle left and full throttle right... Think it will be good to allow the car to do smaller left and right turns....!
 
 
 Model.py Changes:
@@ -42,15 +42,11 @@ Main.py Changes:
 
 1. Check if the directory for save is empty, if yes, do normal 'agent = DQNAgent()'. If not empty, initialize it by passing the latest model like 'agent = DQNAgent(MODEL_PATH)'
 
-2. initialize MEMORY_FRACTION at top to 0.95
+2. [DONE] initialize MEMORY_FRACTION at top to 0.95
 
-3. Add values for these variables: AGGREGATE_STATS_EVERY, MIN_REWARD, MIN_EPSILON, EPSILON_DECAY . If no idea about these values, check the ones used by OG Creator at https://pythonprogramming.net/reinforcement-learning-environment-self-driving-autonomous-cars-carla-python/?completed=/control-camera-sensor-self-driving-autonomous-cars-carla-python/
+3. [DONE] Add values for these variables: AGGREGATE_STATS_EVERY, MIN_REWARD, MIN_EPSILON, EPSILON_DECAY . If no idea about these values, check the ones used by OG Creator at https://pythonprogramming.net/reinforcement-learning-environment-self-driving-autonomous-cars-carla-python/?completed=/control-camera-sensor-self-driving-autonomous-cars-carla-python/
 
-4. initialize EPISODES initially to 100. Once we see some convergence, train for another 100000 episodes
-
-5. Reset the new private methods of the 'Environment.py' similar to 'env.collision_hist = []' currently in the 'Main.py'
-
-6. Add logging so that user can know when the training goes to next episode, what the reward was in the current episode and the episode number. Print statements should do...
+4. Reset the new private methods of the 'Environment.py' similar to 'env.collision_hist = []' currently in the 'Main.py'
 
 Additional Notes for training:
 ------------------------------

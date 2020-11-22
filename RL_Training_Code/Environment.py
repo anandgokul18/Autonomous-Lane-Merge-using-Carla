@@ -19,7 +19,7 @@ import carla
 SHOW_PREVIEW = True
 IM_WIDTH = 640
 IM_HEIGHT = 480
-SECONDS_PER_EPISODE = 10
+SECONDS_PER_EPISODE = 100  # We need to on-ramp and drive. So increasing to 100
 
 
 class CarEnv:
@@ -32,7 +32,8 @@ class CarEnv:
     def __init__(self):
         self.client = carla.Client("127.0.0.1", 2000)
         self.client.set_timeout(60.0)
-        self.world = self.client.get_world()
+        #self.world = self.client.get_world()
+        self.world = self.client.load_world('Town04')
         self.blueprint_library = self.world.get_blueprint_library()
         self.model_3 = self.blueprint_library.filter("model3")[0]
 
@@ -40,8 +41,12 @@ class CarEnv:
         self.collision_hist = []
         self.actor_list = []
 
-        self.transform = random.choice(self.world.get_map().get_spawn_points())
-        self.vehicle = self.world.spawn_actor(self.model_3, self.transform)
+        desired_spawn_point = carla.Transform(carla.Location(
+            131.7, -54.3, 9), carla.Rotation(0, 84, 0))
+        self.vehicle = self.world.spawn_actor(
+            self.model_3, desired_spawn_point)
+        #self.transform = random.choice(self.world.get_map().get_spawn_points())
+        #self.vehicle = self.world.spawn_actor(self.model_3, self.transform)
         self.actor_list.append(self.vehicle)
 
         self.rgb_cam = self.blueprint_library.find('sensor.camera.rgb')
@@ -88,15 +93,27 @@ class CarEnv:
         self.front_camera = i3
 
     def step(self, action):
-        if action == 0:
+        if action == 0:  # full throttle left
             self.vehicle.apply_control(carla.VehicleControl(
                 throttle=1.0, steer=-1*self.STEER_AMT))
-        elif action == 1:
+        elif action == 1:  # full throttle straight
             self.vehicle.apply_control(
                 carla.VehicleControl(throttle=1.0, steer=0))
-        elif action == 2:
+        elif action == 2:  # full throttle right
             self.vehicle.apply_control(carla.VehicleControl(
                 throttle=1.0, steer=1*self.STEER_AMT))
+        elif action == 3:  # half throttle left
+            self.vehicle.apply_control(carla.VehicleControl(
+                throttle=0.5, steer=-0.5*self.STEER_AMT))
+        elif action == 4:  # half throttle straight
+            self.vehicle.apply_control(carla.VehicleControl(
+                throttle=0.5, steer=0))
+        elif action == 5:  # half throttle right
+            self.vehicle.apply_control(carla.VehicleControl(
+                throttle=0.5, steer=0.5*self.STEER_AMT))
+        elif action == 6:  # full brake
+            self.vehicle.apply_control(carla.VehicleControl(
+                brake=1, steer=0))
 
         v = self.vehicle.get_velocity()
         kmh = int(3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2))
