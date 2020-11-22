@@ -37,35 +37,6 @@ IM_WIDTH = 640
 IM_HEIGHT = 480
 
 
-def step(vehicle, action):
-    # moving straight
-    if action == 0:
-        vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0))
-    # moving left
-    if action == 1:
-        vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=-1))
-    # moving right
-    if action == 2:
-        vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=1))
-    v = vehicle.get_velocity()
-    kmh = int(3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2))
-
-    if len(self.collision_hist) != 0:
-        done = True
-        reward = -200
-    elif kmh < 50:
-        done = False
-        reward = -1
-    else:
-        done = False
-        reward = 1
-
-    if self.episode_start + SECONDS_PER_EPISODE < time.time():
-        done = True
-
-    return self.front_camera, reward, done, None
-
-
 def process_img(image):
     # convert the raw_data to an array
     i = np.array(image.raw_data)
@@ -83,17 +54,14 @@ def process_img(image):
 # These will be the actors whcih will be needed for the list. Used for both init and cleanup
 actor_list = []
 
-# Collision history of the ego vehicle
-collision_history = []
-
 try:
     # We need to ensure the delay factors if using non-local servers, say on another machine dedicated to training.
     # For non-local machines, delay= sending+training every iter + receivin, all cause delays... use local if possible
     # NOTE TO SELF: Once final code is set in stone, revisit this and see the delay for the remote machine
-    client = carla.Client("localhost", 2000)
+    client = carla.Client("127.0.0.1", 2000)
 
     # Setting 2 sec timeout (the docs use 10)
-    client.set_timeout(2.0)
+    client.set_timeout(60.0)
 
     # We are loading the World as Town04 since Town04 map is the highway which we are planning to train on
     # Default: world = client.get_world()
@@ -107,24 +75,26 @@ try:
     # Choosing the spawn point for the ego car
     # Carla comes with ~200 spawn points.
     # List of spawn_points: = world.get_map().get_spawn_points()
-    # random spawn_point: spawn_point = random.choice(world.get_map().get_spawn_points())
+    # random spawn_point: 
+    #spawn_point = random.choice(world.get_map().get_spawn_points())
     # Choosing desired spawn point based on x,y and z in map
     # NOTE: Need to change this so that the car spawns on the on-ramp
-    spawn_point1 = carla.Transform(carla.Location(
-        205.1, -318.8, 0), carla.Rotation(0, -89, 0))
+    
+    spawn_point1 = carla.Transform(carla.Location(206.7, -357.4, 1), carla.Rotation(0, -86, 0)) #Type=Driving
+    spawn_point2 = carla.Transform(carla.Location(211.7, -363.8, 1), carla.Rotation(0, -1, 0)) #Type=Driving
 
-    spawn_point2 = carla.Transform(carla.Location(
-        129.4, -69.5, 6), carla.Rotation(0, 89, 0))
+    spawn_point3 = carla.Transform(carla.Location(131.7, -54.3, 9), carla.Rotation(0, 84, 0))
+    spawn_point4 = carla.Transform(carla.Location(103.7, -1.5, 12), carla.Rotation(0, 148, 0))
 
     # Choosing one of the 2 on-ramp spawn points randomly
-    spawn_point = random.choice([spawn_point1, spawn_point2])
+    spawn_point = random.choice([spawn_point1, spawn_point2, spawn_point3, spawn_point4])
 
     # Spawining the Ego car actor
     vehicle = world.spawn_actor(bp, spawn_point)
 
     # Control the car.
     # For now, just go straight at full throttle
-    vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0.0))
+    vehicle.apply_control(carla.VehicleControl(throttle=0.0, steer=0.0))
 
     # Adding our ego car to list of actors to cleanup
     actor_list.append(vehicle)
@@ -149,8 +119,19 @@ try:
     # Get the actual data from the sensor and preprocess the data using lambda function
     sensor.listen(lambda data: process_img(data))
 
-    # 5 sec training
-    time.sleep(5)
+    #Print the current waypoint type
+    waypoint = world.get_map().get_waypoint(vehicle.get_location(),project_to_road=True, lane_type=(carla.LaneType.Driving | carla.LaneType.Shoulder | carla.LaneType.OnRamp))
+    print("Current lane type: " + str(waypoint.lane_type))
+    # Check current lane change allowed
+    print("Current Lane change:  " + str(waypoint.lane_change))
+    # Left and Right lane markings
+    print("L lane marking type: " + str(waypoint.left_lane_marking.type))
+    print("L lane marking change: " + str(waypoint.left_lane_marking.lane_change))
+    print("R lane marking type: " + str(waypoint.right_lane_marking.type))
+    print("R lane marking change: " + str(waypoint.right_lane_marking.lane_change))
+
+    # 20 sec training
+    time.sleep(20)
 
 finally:
     for actor in actor_list:
