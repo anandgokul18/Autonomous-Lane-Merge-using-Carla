@@ -26,6 +26,7 @@ class CarEnv:
     im_width = IM_WIDTH
     im_height = IM_HEIGHT
     front_camera = None
+    number_of_lane_changes = 0
 
     def __init__(self):
         self.client = carla.Client("localhost", 2000)
@@ -38,6 +39,7 @@ class CarEnv:
     def reset(self):
         self.collision_hist = []
         self.actor_list = []
+        self.lane_crossing = []
 
         #sample
         #self.illegalcrossing = []
@@ -65,6 +67,12 @@ class CarEnv:
         self.actor_list.append(self.colsensor)
         self.colsensor.listen(lambda event: self.collision_data(event))
 
+        # Adding lane detect sensor
+        lanedetectsensor = self.blueprint_library.find("sensor.other.lane_detector")  # or sensor.other.lane_invasion 
+        self.lanedetectsensor = self.world.spawn_actor(lanedetectsensor, transform, attach_to=self.vehicle)
+        self.actor_list.append(self.lanedetectsensor)
+        self.lanedetectsensor.listen(lambda event: self.lane_crossing(event))
+
         while self.front_camera is None:
             time.sleep(0.01)
 
@@ -75,6 +83,9 @@ class CarEnv:
 
     def collision_data(self, event):
         self.collision_hist.append(event)
+
+    def lane_crossing(self,event):
+        self.lane_crossing.append(event)
 
     # sample
     #def lanefunc(event):
@@ -93,6 +104,13 @@ class CarEnv:
         self.front_camera = i3
 
     def step(self, action):
+
+        on_ramp = False
+
+        current_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
+        if current_lane.lane_type == carla.laneType.OnRamp):
+            on_ramp = True
+
         if action == 0:
             self.vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=-1*self.STEER_AMT))
         elif action == 1:
@@ -103,12 +121,34 @@ class CarEnv:
         v = self.vehicle.get_velocity()
         kmh = int(3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2))
 
+        # Going from ramp to freeway
+        new_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
+        if on_ramp == True and new_lane.get_right_lane() == carla.laneType.Shoulder and new_lane.get_left_lane() == carla.laneType.Driving:
+            on_ramp = False
+            reward += 2
+
+        #checking illegal lane changes
+
+
+        done = False
+        if len(self.lane_crossing) != 0:
+            for x in self.lane_crossing:
+                clm = x.crossed_lane_markings     #How many events in here?
+                for marking in clm:
+                    if marking == 'Solid' or marking == 'SolidSolid':
+                        reward = -10
+                        done = True
+
         if len(self.collision_hist) != 0:
             done = True
-            reward = -200
-        elif kmh < 50:
-            done = False
-            reward = -1
+            reward = -10
+        
+        if done == False:
+            if kmh < 50:
+                reward = -0.1
+            elif kmh >= 50:
+                reward += 1
+        
 
         #sample
         #elif len(listoflegalcrossing)==1:
@@ -117,9 +157,9 @@ class CarEnv:
         #elif event.lanecrossing.type!='legal/broken':
         #    reward=-2
 
-        else:
-            done = False
-            reward = 1
+        # else:
+        #     done = False
+        #     reward = 1
 
         if self.episode_start + SECONDS_PER_EPISODE < time.time():
             done = True
