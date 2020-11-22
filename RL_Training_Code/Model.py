@@ -8,22 +8,43 @@ import cv2
 import math
 import matplotlib.pyplot as plt
 from collections import deque
-from keras.applications.xception import Xception
-from keras.layers import Dense, GlobalAveragePooling2D
-from keras.models import Sequential, Model
-from keras.layers import Dense, GlobalAveragePooling2D, Input, Concatenate, Conv2D, AveragePooling2D, Activation, Flatten
-from keras.optimizers import Adam
-from keras.models import Model
-from keras.callbacks import TensorBoard
+from tensorflow.keras.applications.xception import Xception
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Input, Concatenate, Conv2D, AveragePooling2D, Activation, Flatten
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import Model
+from tensorflow.keras.callbacks import TensorBoard
 import tensorflow as tf
 import keras.backend.tensorflow_backend as backend
 from threading import Thread
 from Environment import *
 
 
-REPLAY_MEMORY_SIZE = 50_000
+SHOW_PREVIEW = False
+IM_WIDTH = 640
+IM_HEIGHT = 480
+SECONDS_PER_EPISODE = 10
+REPLAY_MEMORY_SIZE = 5_000
 MIN_REPLAY_MEMORY_SIZE = 1_000
-MODEL_NAME = "256x2"
+MINIBATCH_SIZE = 16
+PREDICTION_BATCH_SIZE = 1
+TRAINING_BATCH_SIZE = MINIBATCH_SIZE // 4
+UPDATE_TARGET_EVERY = 5
+MODEL_NAME = "Xception"
+
+MEMORY_FRACTION = 0.4
+MIN_REWARD = -200
+
+EPISODES = 100
+
+DISCOUNT = 0.99
+epsilon = 1
+EPSILON_DECAY = 0.95 ## 0.9975 99975
+MIN_EPSILON = 0.001
+
+AGGREGATE_STATS_EVERY = 10
+#backend._SYMBOLIC_SCOPE.value = True
 
 
 # Own Tensorboard class
@@ -61,7 +82,7 @@ class ModifiedTensorBoard(TensorBoard):
 class DQNAgent:
     def __init__(self):
         self.model = self.create_model()
-        self.target_model = self.create_model()replay memory size sentdexreplay memory size sentdex
+        self.target_model = self.create_model()
         self.target_model.set_weights(self.model.get_weights())
 
         self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
@@ -78,21 +99,14 @@ class DQNAgent:
 
         IM_WIDTH = 640
         IM_HEIGHT = 480
-        model = Sequential()
+        base_model = Xception(weights=None, include_top=False, input_shape=(IM_HEIGHT, IM_WIDTH,3))
 
-        model.add(Conv2D(64, (3, 3), input_shape=(IM_HEIGHT, IM_WIDTH,3), padding='same'))
-        model.add(Activation('relu'))
-        model.add(AveragePooling2D(pool_size=(5, 5), strides=(3, 3), padding='same'))
+        x = base_model.output
+        x = GlobalAveragePooling2D()(x)
 
-        model.add(Conv2D(64, (3, 3), padding='same'))
-        model.add(Activation('relu'))
-        model.add(AveragePooling2D(pool_size=(5, 5), strides=(3, 3), padding='same'))
-
-        model.add(Conv2D(64, (3, 3), padding='same'))
-        model.add(Activation('relu'))
-        model.add(AveragePooling2D(pool_size=(5, 5), strides=(3, 3), padding='same'))
-
-        model.add(Flatten())
+        predictions = Dense(3, activation="linear")(x)
+        model = Model(inputs=base_model.input, outputs=predictions)
+        model.compile(loss="mse", optimizer=Adam(lr=0.001), metrics=["accuracy"])
         return model
 
     def update_replay_memory(self, transition):

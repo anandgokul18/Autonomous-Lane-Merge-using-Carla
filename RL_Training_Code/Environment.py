@@ -16,7 +16,7 @@ except IndexError:
     pass
 import carla
 
-SHOW_PREVIEW = False
+SHOW_PREVIEW = True
 IM_WIDTH = 640
 IM_HEIGHT = 480
 
@@ -29,8 +29,8 @@ class CarEnv:
     number_of_lane_changes = 0
 
     def __init__(self):
-        self.client = carla.Client("localhost", 2000)
-        self.client.set_timeout(2.0)
+        self.client = carla.Client("127.0.0.1", 2000)
+        self.client.set_timeout(60.0)
         self.world = self.client.get_world()
         self.blueprint_library = self.world.get_blueprint_library()
         self.model_3 = self.blueprint_library.filter("model3")[0]
@@ -108,7 +108,7 @@ class CarEnv:
         on_ramp = False
 
         current_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
-        if current_lane.lane_type == carla.laneType.OnRamp):
+        if current_lane.lane_type == carla.laneType.OnRamp:
             on_ramp = True
 
         if action == 0:
