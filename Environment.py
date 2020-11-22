@@ -34,9 +34,14 @@ class CarEnv:
         self.blueprint_library = self.world.get_blueprint_library()
         self.model_3 = self.blueprint_library.filter("model3")[0]
 
+
     def reset(self):
         self.collision_hist = []
         self.actor_list = []
+
+        #sample
+        #self.illegalcrossing = []
+        #self.brokencrossing = []
 
         self.transform = random.choice(self.world.get_map().get_spawn_points())
         self.vehicle = self.world.spawn_actor(self.model_3, self.transform)
@@ -71,6 +76,12 @@ class CarEnv:
     def collision_data(self, event):
         self.collision_hist.append(event)
 
+    # sample
+    #def lanefunc(event):
+    # Get the text format from the manual_control example file
+    #    if text=='broken while':
+    #        appendtobrokenlist=[]
+
     def process_img(self, image):
         i = np.array(image.raw_data)
         #print(i.shape)
@@ -98,6 +109,14 @@ class CarEnv:
         elif kmh < 50:
             done = False
             reward = -1
+
+        #sample
+        #elif len(listoflegalcrossing)==1:
+        #    reward = 50
+
+        #elif event.lanecrossing.type!='legal/broken':
+        #    reward=-2
+
         else:
             done = False
             reward = 1
