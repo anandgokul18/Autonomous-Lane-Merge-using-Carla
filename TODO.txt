@@ -1,0 +1,39 @@
+To-do list:
+===========
+
+Environment.py Changes:
+-----------------------
+
+1. Add lane merge reward based on the car's current lane position and surrounding type of lane markings. If it goes from on-ramp conditions to driving/highway condition- Consider as successful merge and give +100 reward and Done=False
+
+2. Add a method that uses lane sensor and sees if the car does any illegal lane change. If it does, penalize it with -100 and set Done=True
+
+3. [TRY] See if we should incentivize lane change (bad idea), but, if we do, how do we counter balance it so that the car doesn't swerve around!?
+
+4. Add the spawn point of the car as the location in the laneMerge.py's spawnpoint3
+
+5. Add 'SECONDS_PER_EPISODE' variable at top for '100' seconds (int)
+
+
+Model.py Changes:
+-----------------
+
+1. Add a new init to the DQNAgent so that we can load an existing model. Essentially, we need to do 'self.model = load_model(MODEL_PATH)' . the load_model is imported from 'from keras.models import load_model'. The MODEL_PATH will be provided as input argument to init. 
+- If MODEL_PATH input arg is None, then do as currently done. Else, load the model in MODEL_PATH. 
+- This method will help to resume episodes in case the run crashes, though we manually have to keep track of episode count to get statistics since episode will start from 0 after every restart
+
+2. Add a print statement if loading a model using MODEL_PATH for logging purposes
+
+
+Main.py Changes:
+----------------
+
+1. Check if the directory for save is empty, if yes, do normal 'agent = DQNAgent()'. If not empty, initialize it by passing the latest model like 'agent = DQNAgent(MODEL_PATH)'
+
+2. initialize MEMORY_FRACTION at top to 0.95
+
+3. Add values for these variables: AGGREGATE_STATS_EVERY, MIN_REWARD, MIN_EPSILON, EPSILON_DECAY . If no idea about these values, check the ones used by OG Creator at https://pythonprogramming.net/reinforcement-learning-environment-self-driving-autonomous-cars-carla-python/?completed=/control-camera-sensor-self-driving-autonomous-cars-carla-python/
+
+4. initialize EPISODES initially to 100. Once we see some convergence, train for another 100000 episodes
+
+5. Reset the new private methods of the 'Environment.py' similar to 'env.collision_hist = []' currently in the 'Main.py'
