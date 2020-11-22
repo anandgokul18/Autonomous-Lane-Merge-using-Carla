@@ -21,11 +21,10 @@ from threading import Thread
 from Environment import *
 
 
-SHOW_PREVIEW = False
+SHOW_PREVIEW = True  # False to speed up training
 IM_WIDTH = 640
 IM_HEIGHT = 480
 
-SECONDS_PER_EPISODE = 10
 
 REPLAY_MEMORY_SIZE = 5_000
 MIN_REPLAY_MEMORY_SIZE = 1_000
@@ -119,35 +118,23 @@ class DQNAgent:
         self.tensorboard = ModifiedTensorBoard(
             log_dir=f"logs/{MODEL_NAME}-{int(time.time())}")
         self.target_update_counter = 0
-        self.graph = tf.compat.v1.get_default_graph()
+        self.graph = tf.get_default_graph()
 
         self.terminate = False
         self.last_logged_episode = 0
         self.training_initialized = False
 
     def create_model(self):
+        base_model = Xception(weights=None, include_top=False,
+                              input_shape=(IM_HEIGHT, IM_WIDTH, 3))
 
-        IM_WIDTH = 640
-        IM_HEIGHT = 480
-        model = Sequential()
+        x = base_model.output
+        x = GlobalAveragePooling2D()(x)
 
-        model.add(Conv2D(64, (3, 3), input_shape=(
-            IM_HEIGHT, IM_WIDTH, 3), padding='same'))
-        model.add(Activation('relu'))
-        model.add(AveragePooling2D(pool_size=(5, 5),
-                                   strides=(3, 3), padding='same'))
-
-        model.add(Conv2D(64, (3, 3), padding='same'))
-        model.add(Activation('relu'))
-        model.add(AveragePooling2D(pool_size=(5, 5),
-                                   strides=(3, 3), padding='same'))
-
-        model.add(Conv2D(64, (3, 3), padding='same'))
-        model.add(Activation('relu'))
-        model.add(AveragePooling2D(pool_size=(5, 5),
-                                   strides=(3, 3), padding='same'))
-
-        model.add(Flatten())
+        predictions = Dense(3, activation="linear")(x)
+        model = Model(inputs=base_model.input, outputs=predictions)
+        model.compile(loss="mse", optimizer=Adam(
+            lr=0.001), metrics=["accuracy"])
         return model
 
     def update_replay_memory(self, transition):

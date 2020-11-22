@@ -6,40 +6,38 @@ import time
 import numpy as np
 import cv2
 import math
-import matplotlib.pyplot as plt
 from collections import deque
 from keras.applications.xception import Xception
 from keras.layers import Dense, GlobalAveragePooling2D
-from keras.models import Sequential, Model
-from keras.layers import Dense, GlobalAveragePooling2D, Input, Concatenate, Conv2D, AveragePooling2D, Activation, Flatten
 from keras.optimizers import Adam
 from keras.models import Model
 from keras.callbacks import TensorBoard
 import tensorflow as tf
 import keras.backend.tensorflow_backend as backend
 from threading import Thread
+
+from tqdm import tqdm
+
 from Environment import *
 from Model import *
 
-
-MEMORY_FRACTION = 0.95
+MEMORY_FRACTION = 0.95  # Amount of GPU to allocate to the training. Can set to 1 as well
 
 if __name__ == '__main__':
-
-    FPS = 60
+    FPS = 20  # 60
     # For stats
     ep_rewards = [-200]
 
     # For more repetitive results
     random.seed(1)
     np.random.seed(1)
-    tf.compat.v1.set_random_seed(1)
+    tf.set_random_seed(1)
 
     # Memory fraction, used mostly when trai8ning multiple agents
-    gpu_options = tf.compat.v1.GPUOptions(
+    gpu_options = tf.GPUOptions(
         per_process_gpu_memory_fraction=MEMORY_FRACTION)
-    tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(
-        config=tf.compat.v1.ConfigProto(gpu_options=gpu_options)))
+    backend.set_session(tf.Session(
+        config=tf.ConfigProto(gpu_options=gpu_options)))
 
     # Create models folder
     if not os.path.isdir('models'):
@@ -55,17 +53,21 @@ if __name__ == '__main__':
     while not agent.training_initialized:
         time.sleep(0.01)
 
+    # Initialize predictions - forst prediction takes longer as of initialization that has to be done
+    # It's better to do a first prediction then before we start iterating over episode steps
     agent.get_qs(np.ones((env.im_height, env.im_width, 3)))
 
     # Iterate over episodes
-    scores = []
-    avg_scores = []
     for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
+        # try:
 
         env.collision_hist = []
 
+        # Update tensorboard step every episode
+        agent.tensorboard.step = episode
+
         # Restarting episode - reset episode reward and step number
-        score = 0
+        episode_reward = 0
         step = 1
 
         # Reset environment and get initial state
@@ -91,7 +93,7 @@ if __name__ == '__main__':
             new_state, reward, done, _ = env.step(action)
 
             # Transform new continous state to new discrete state and count reward
-            score += reward
+            episode_reward += reward
 
             # Every step we update replay memory
             agent.update_replay_memory(
@@ -107,11 +109,11 @@ if __name__ == '__main__':
         for actor in env.actor_list:
             actor.destroy()
 
-        scores.append(score)
-        avg_scores.append(np.mean(scores[-10:]))
-
+        # Append episode reward to a list and log stats (every given number of episodes)
+        ep_rewards.append(episode_reward)
         if not episode % AGGREGATE_STATS_EVERY or episode == 1:
-            avg_scores.append(np.mean(scores[-AGGREGATE_STATS_EVERY:]))
+            average_reward = sum(
+                ep_rewards[-AGGREGATE_STATS_EVERY:])/len(ep_rewards[-AGGREGATE_STATS_EVERY:])
             min_reward = min(ep_rewards[-AGGREGATE_STATS_EVERY:])
             max_reward = max(ep_rewards[-AGGREGATE_STATS_EVERY:])
             agent.tensorboard.update_stats(
@@ -120,9 +122,8 @@ if __name__ == '__main__':
             # Save model, but only when min reward is greater or equal a set value
             if min_reward >= MIN_REWARD:
                 agent.model.save(
-                    f'models/{MODEL_NAME}__{max_reward:_>7.2f}max_{avg_score:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
+                    f'models/{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
 
-        print('episode: ', episode, 'score %.2f' % score)
         # Decay epsilon
         if epsilon > MIN_EPSILON:
             epsilon *= EPSILON_DECAY
@@ -132,8 +133,9 @@ if __name__ == '__main__':
     agent.terminate = True
     trainer_thread.join()
     agent.model.save(
-        f'models/{MODEL_NAME}__{max_reward:_>7.2f}max_{avg_score:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
+        f'models/{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
 
+    """
     fig = plt.figure()
     ax = fig.add_subplot(111)
     plt.plot(scores)
@@ -141,3 +143,4 @@ if __name__ == '__main__':
     plt.ylabel('Score')
     plt.xlabel('Episode #')
     plt.show()
+    """
