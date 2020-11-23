@@ -35,8 +35,9 @@ class CarEnv:
         self.client = carla.Client("127.0.0.1", 2000)
         self.client.set_timeout(60.0)
         #self.world = self.client.get_world()
-        #self.world = self.client.load_world('Town04')
+        self.world = self.client.load_world('Town04')
 
+        """
         world_loaded_flag=False
         world_retry_count = 0
         while(not world_loaded_flag):
@@ -50,6 +51,7 @@ class CarEnv:
                     print("ERROR: Could not load world after 10 retries")
                     sys.exit(1)
                 pass
+        """
 
         self.blueprint_library = self.world.get_blueprint_library()
         self.model_3 = self.blueprint_library.filter("model3")[0]
@@ -62,15 +64,20 @@ class CarEnv:
 
         desired_spawn_point = carla.Transform(carla.Location(
             131.7, -54.3, 9), carla.Rotation(0, 84, 0))
-        
-        car_loaded_flag=False
+
+        self.vehicle = self.world.spawn_actor(
+            self.model_3, desired_spawn_point)
+        """
+        car_loaded_flag = False
         while(not car_loaded_flag):
             try:
-                self.vehicle = self.world.spawn_actor(self.model_3, desired_spawn_point)
+                self.vehicle = self.world.spawn_actor(
+                    self.model_3, desired_spawn_point)
                 car_loaded_flag = True
             except Exception:
                 time.sleep(20)
                 pass
+        """
 
         #self.transform = random.choice(self.world.get_map().get_spawn_points())
         #self.vehicle = self.world.spawn_actor(self.model_3, self.transform)
@@ -97,8 +104,10 @@ class CarEnv:
         self.actor_list.append(self.colsensor)
         self.colsensor.listen(lambda event: self.collision_data(event))
 
-        lanedetectsensor = self.blueprint_library.find("sensor.other.lane_invasion")  # or sensor.other.lane_invasion 
-        self.lanedetectsensor = self.world.spawn_actor(lanedetectsensor, transform, attach_to=self.vehicle)
+        lanedetectsensor = self.blueprint_library.find(
+            "sensor.other.lane_invasion")  # or sensor.other.lane_invasion
+        self.lanedetectsensor = self.world.spawn_actor(
+            lanedetectsensor, transform, attach_to=self.vehicle)
         self.actor_list.append(self.lanedetectsensor)
         self.lanedetectsensor.listen(lambda event: self.lane_crossing(event))
 
@@ -131,7 +140,6 @@ class CarEnv:
         current_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
         if current_lane.left_lane_marking.type == 'Solid' and current_lane.right_lane_marking.type == 'Solid':
             on_ramp = True
-
 
         if action == 0:  # full throttle left
             self.vehicle.apply_control(carla.VehicleControl(
@@ -169,7 +177,7 @@ class CarEnv:
         done = False
         if len(self.lane_crossing) != 0:
             for x in self.lane_crossing:
-                clm = x.crossed_lane_markings     #How many events in here?
+                clm = x.crossed_lane_markings  # How many events in here?
                 for marking in clm:
                     if marking == 'Solid' or marking == 'SolidSolid':
                         reward = -100
