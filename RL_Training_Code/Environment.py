@@ -93,6 +93,11 @@ class CarEnv:
         self.actor_list.append(self.colsensor)
         self.colsensor.listen(lambda event: self.collision_data(event))
 
+        lanedetectsensor = self.blueprint_library.find("sensor.other.lane_invasion")  # or sensor.other.lane_invasion 
+        self.lanedetectsensor = self.world.spawn_actor(lanedetectsensor, transform, attach_to=self.vehicle)
+        self.actor_list.append(self.lanedetectsensor)
+        self.lanedetectsensor.listen(lambda event: self.lane_crossing(event))
+
         while self.front_camera is None:
             time.sleep(0.01)
 
@@ -116,6 +121,14 @@ class CarEnv:
         self.front_camera = i3
 
     def step(self, action):
+
+        on_ramp = False
+
+        current_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
+        if current_lane.lane_type == carla.laneType.OnRamp:
+            on_ramp = True
+
+
         if action == 0:  # full throttle left
             self.vehicle.apply_control(carla.VehicleControl(
                 throttle=1.0, steer=-0.75*self.STEER_AMT))
@@ -141,15 +154,32 @@ class CarEnv:
         v = self.vehicle.get_velocity()
         kmh = int(3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2))
 
+        # Going from ramp to freeway
+        new_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
+        if on_ramp == True and new_lane.get_right_lane() == carla.laneType.Shoulder and new_lane.lane_type == carla.laneType.Driving:
+            on_ramp = False
+            reward += 2
+
+        done = False
+        if len(self.lane_crossing) != 0:
+            for x in self.lane_crossing:
+                clm = x.crossed_lane_markings     #How many events in here?
+                for marking in clm:
+                    if marking == 'Solid' or marking == 'SolidSolid':
+                        reward = -10
+                        done = True
+
         if len(self.collision_hist) != 0:
             done = True
-            reward = -200
-        elif kmh < 50:
-            done = False
-            reward = -1
-        else:
-            done = False
-            reward = 1
+            reward = -10
+
+        if done == False:
+            if kmh < 50:
+                reward -= 1
+            if kmh >= 50:
+                reward += 1
+            else:
+                reward = 1
 
         if self.episode_start + SECONDS_PER_EPISODE < time.time():
             done = True
