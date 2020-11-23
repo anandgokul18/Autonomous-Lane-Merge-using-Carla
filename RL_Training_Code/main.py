@@ -81,8 +81,8 @@ if __name__ == '__main__':
                     # Get action from Q table
                     action = np.argmax(agent.get_qs(current_state))
                 else:
-                    # Get random action
-                    action = np.random.randint(0, 3)
+                    # Get random action every epsilon to try out new moves... we have 7 actions allowed... CHANGE IF MORE ACTIONS
+                    action = np.random.randint(0, 4) 
                     # This takes no time, so we add a delay matching 60 FPS (prediction above takes longer)
                     time.sleep(1/FPS)
 
