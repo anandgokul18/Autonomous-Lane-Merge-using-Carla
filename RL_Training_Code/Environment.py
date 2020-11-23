@@ -16,10 +16,10 @@ except IndexError:
     pass
 import carla
 
-SHOW_PREVIEW = True
+SHOW_PREVIEW = False
 IM_WIDTH = 640
 IM_HEIGHT = 480
-SECONDS_PER_EPISODE = 100  # We need to on-ramp and drive. So increasing to 100
+SECONDS_PER_EPISODE = 40  # We need to on-ramp and drive. So increasing to 100
 
 
 class CarEnv:
@@ -33,7 +33,7 @@ class CarEnv:
 
     def __init__(self):
         self.client = carla.Client("127.0.0.1", 2000)
-        self.client.set_timeout(120.0)
+        self.client.set_timeout(60.0)
         
         # FIRST do client.load_world(), then, do get_world()
         self.world = self.client.get_world()
@@ -48,12 +48,11 @@ class CarEnv:
         self.first_lane_change_on_freeway = True
         self.lane_crossings = []
 
-        #desired_spawn_point = carla.Transform(carla.Location(-33.3, -87.5, 1), carla.Rotation(0, 44, 0))
+        desired_spawn_point = carla.Transform(carla.Location(-33.3, -87.5, 2), carla.Rotation(0, 44, 0))
 
-        desired_spawn_point = carla.Transform(carla.Location(-25.2, -78.7, 1), carla.Rotation(0, 57, 0))
+        #desired_spawn_point = carla.Transform(carla.Location(-25.2, -78.7, 1), carla.Rotation(0, 57, 0))
 
-        self.vehicle = self.world.spawn_actor(
-            self.model_3, desired_spawn_point)
+        self.vehicle = self.world.spawn_actor(self.model_3, desired_spawn_point)
 
         #self.transform = random.choice(self.world.get_map().get_spawn_points())
         #self.vehicle = self.world.spawn_actor(self.model_3, self.transform)
@@ -119,6 +118,9 @@ class CarEnv:
         # Starting reward for current step.
         reward = 0
 
+        # Survival reward
+        reward += 1 #+1 for each survival step
+
         current_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
         if str(current_lane.left_lane_marking.type) == 'Solid' and str(current_lane.right_lane_marking.type) == 'Solid':
             print("[LOG] On-ramp is true")
@@ -127,35 +129,41 @@ class CarEnv:
         if action == 0:  # full throttle left
             self.vehicle.apply_control(carla.VehicleControl(
                 throttle=1.0, steer=-0.25*self.STEER_AMT, reverse= False, hand_brake=False))
-            print("[LOG] Action 0")
+            #print("[LOG] Action 0")
         elif action == 1:  # full throttle straight
             self.vehicle.apply_control(
                 carla.VehicleControl(throttle=1.0, steer=0, reverse= False, hand_brake=False))
-            print("[LOG] Action 1")
+            #print("[LOG] Action 1")
         elif action == 2:  # full throttle right
             self.vehicle.apply_control(carla.VehicleControl(
                 throttle=1.0, steer=0.25*self.STEER_AMT, reverse= False, hand_brake=False))
-            print("[LOG] Action 2")
+            #print("[LOG] Action 2")
         elif action == 3:  # half throttle straight
             self.vehicle.apply_control(carla.VehicleControl(
                 throttle=0.5, steer=0, reverse= False, hand_brake=False))
-            print("[LOG] Action 3")
+            #print("[LOG] Action 3")
+        elif action == 4:  # crawl straight
+            self.vehicle.apply_control(carla.VehicleControl(
+                throttle=0.1, steer=0, reverse= False, hand_brake=False))
+            #print("[LOG] Action 4")
 
         
 
         v = self.vehicle.get_velocity()
         kmh = int(3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2))
 
+        done = False
+
         # Going from ramp to freeway
         new_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
         if on_ramp == True and str(new_lane.left_lane_marking.type) == 'Broken' and str(new_lane.right_lane_marking.type) == 'Solid':
             on_ramp = False
-            reward += 100
+            reward += 200
             self.first_lane_change_on_freeway = False
             print("[LOG] Ramp to freeway!")
+            done = True ### Phase 1 training
         
-
-        done = False
+        
         # TODO NOTE Need to optimize this code so that we dont iterate over entire list everytime!
         if len(self.lane_crossings) != 0:
             for x in self.lane_crossings:
@@ -163,22 +171,27 @@ class CarEnv:
                 for marking in clm:
                     #print(str(marking.type)) 
                     if str(marking.type) != 'Broken': #str(marking.type) == 'Solid' or str(marking.type) == 'SolidSolid' or str(marking.type) == 'Curb' or str(marking.type) == 'Other':
-                        reward = -100
-                        print(f"[LOG] {str(marking.type)} Crossed...Done")
+                        reward += -100
+                        print(f"[LOG] {str(marking.type)} Crossed...Penalty")
                         done = True
                     elif self.first_lane_change_on_freeway == False and str(marking.type) == 'Broken':  # Rewarding the first change on the freeway
                         reward += 100
                         self.first_lane_change_on_freeway = True
                         print("[LOG] First lane change on freeway")
+                    else: # Penalizing unnecessary lane changes
+                        reward += -10
+                        print("[LOG] Lane Change penalty")
 
         if len(self.collision_hist) != 0:
             done = True
             print("[LOG] Collided...Done")
-            reward = -200
+            reward += -200
 
         if done == False:
             if kmh < 50:
-                reward -= 1
+                #Phase 1...No speed incentive
+                #reward += -1
+                pass
             elif kmh >= 50:
                 reward += 1
 

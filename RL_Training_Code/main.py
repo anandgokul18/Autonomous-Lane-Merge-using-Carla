@@ -25,7 +25,7 @@ from tqdm import tqdm
 
 if __name__ == '__main__':
 
-    FPS = 20 #60
+    FPS = 40 #60
     # For stats
     ep_rewards = [-200]
 
@@ -62,6 +62,9 @@ if __name__ == '__main__':
 
             env.collision_hist = []
 
+            env.first_lane_change_on_freeway = True
+            env.lane_crossings = []
+
             # Restarting episode - reset episode reward and step number
             score = 0
             step = 1
@@ -81,8 +84,9 @@ if __name__ == '__main__':
                     # Get action from Q table
                     action = np.argmax(agent.get_qs(current_state))
                 else:
-                    # Get random action every epsilon to try out new moves... we have 7 actions allowed... CHANGE IF MORE ACTIONS
-                    action = np.random.randint(0, 4) 
+                    # Get random action every epsilon to try out new moves... we have 4 actions allowed... CHANGE IF MORE ACTIONS
+                    action = np.random.randint(0, 4)
+                    #action = random.choices(population=[0,1,2,3,4],weights=[0.2,0.3,0.2,0.2,0.1],k=1)[0] # Logic: Going straight is more important
                     # This takes no time, so we add a delay matching 60 FPS (prediction above takes longer)
                     time.sleep(1/FPS)
 
