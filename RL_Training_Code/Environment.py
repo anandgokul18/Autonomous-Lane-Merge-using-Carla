@@ -28,6 +28,8 @@ class CarEnv:
     im_width = IM_WIDTH
     im_height = IM_HEIGHT
     front_camera = None
+    reward = -300
+    first_lane_change_on_freeway = True
 
     def __init__(self):
         self.client = carla.Client("127.0.0.1", 2000)
@@ -55,6 +57,8 @@ class CarEnv:
     def reset(self):
         self.collision_hist = []
         self.actor_list = []
+        self.reward = -300
+        self.first_lane_change_on_freeway = True
 
         desired_spawn_point = carla.Transform(carla.Location(
             131.7, -54.3, 9), carla.Rotation(0, 84, 0))
@@ -125,7 +129,7 @@ class CarEnv:
         on_ramp = False
 
         current_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
-        if current_lane.lane_type == carla.laneType.OnRamp:
+        if current_lane.left_lane_marking.type == 'Solid' and current_lane.right_lane_marking.type == 'Solid':
             on_ramp = True
 
 
@@ -156,9 +160,11 @@ class CarEnv:
 
         # Going from ramp to freeway
         new_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
-        if on_ramp == True and new_lane.get_right_lane() == carla.laneType.Shoulder and new_lane.lane_type == carla.laneType.Driving:
+        if on_ramp == True and new_lane.left_lane_marking.type == 'Broken' and new_lane.right_lane_marking.type == 'Solid':
             on_ramp = False
-            reward += 2
+            reward += 100
+            first_lane_change_on_freeway = False
+        
 
         done = False
         if len(self.lane_crossing) != 0:
@@ -166,20 +172,27 @@ class CarEnv:
                 clm = x.crossed_lane_markings     #How many events in here?
                 for marking in clm:
                     if marking == 'Solid' or marking == 'SolidSolid':
-                        reward = -10
+                        reward = -100
                         done = True
+                    elif first_lane_change_on_freeway == False:  # Rewarding the first change on the freeway
+                        reward += 100
+                        first_lane_change_on_freeway = True
 
         if len(self.collision_hist) != 0:
             done = True
-            reward = -10
+            reward = -200
 
         if done == False:
             if kmh < 50:
-                reward -= 1
-            if kmh >= 50:
-                reward += 1
+                if kmh > 40: # speed <40
+                    reward -= 1
+                elif kmh > 30:
+                    reward -= 2
+                else:
+                    reward -= 3
+
             else:
-                reward = 1
+                reward += 1
 
         if self.episode_start + SECONDS_PER_EPISODE < time.time():
             done = True
