@@ -33,7 +33,22 @@ class CarEnv:
         self.client = carla.Client("127.0.0.1", 2000)
         self.client.set_timeout(60.0)
         #self.world = self.client.get_world()
-        self.world = self.client.load_world('Town04')
+        #self.world = self.client.load_world('Town04')
+
+        world_loaded_flag=False
+        world_retry_count = 0
+        while(not world_loaded_flag):
+            try:
+                self.world = self.client.load_world('Town04')
+                world_loaded_flag = True
+            except Exception:
+                world_retry_count+=1
+                time.sleep(20)
+                if world_retry_count>10:
+                    print("ERROR: Could not load world after 10 retries")
+                    sys.exit(1)
+                pass
+
         self.blueprint_library = self.world.get_blueprint_library()
         self.model_3 = self.blueprint_library.filter("model3")[0]
 
@@ -43,8 +58,16 @@ class CarEnv:
 
         desired_spawn_point = carla.Transform(carla.Location(
             131.7, -54.3, 9), carla.Rotation(0, 84, 0))
-        self.vehicle = self.world.spawn_actor(
-            self.model_3, desired_spawn_point)
+        
+        car_loaded_flag=False
+        while(not car_loaded_flag):
+            try:
+                self.vehicle = self.world.spawn_actor(self.model_3, desired_spawn_point)
+                car_loaded_flag = True
+            except Exception:
+                time.sleep(20)
+                pass
+
         #self.transform = random.choice(self.world.get_map().get_spawn_points())
         #self.vehicle = self.world.spawn_actor(self.model_3, self.transform)
         self.actor_list.append(self.vehicle)
@@ -95,13 +118,13 @@ class CarEnv:
     def step(self, action):
         if action == 0:  # full throttle left
             self.vehicle.apply_control(carla.VehicleControl(
-                throttle=1.0, steer=-1*self.STEER_AMT))
+                throttle=1.0, steer=-0.75*self.STEER_AMT))
         elif action == 1:  # full throttle straight
             self.vehicle.apply_control(
                 carla.VehicleControl(throttle=1.0, steer=0))
         elif action == 2:  # full throttle right
             self.vehicle.apply_control(carla.VehicleControl(
-                throttle=1.0, steer=1*self.STEER_AMT))
+                throttle=1.0, steer=0.75*self.STEER_AMT))
         elif action == 3:  # half throttle left
             self.vehicle.apply_control(carla.VehicleControl(
                 throttle=0.5, steer=-0.5*self.STEER_AMT))
