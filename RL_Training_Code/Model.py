@@ -42,8 +42,8 @@ MIN_EPSILON = 0.001
 AGGREGATE_STATS_EVERY = 10
 #backend._SYMBOLIC_SCOPE.value = True
 
-IM_WIDTH = 640
-IM_HEIGHT = 480
+IM_WIDTH = 300 #640
+IM_HEIGHT = 240 #480
 INPUT_SHAPE = (IM_HEIGHT, IM_WIDTH, 3) #1 is single channel for grayscale, use 3 for rgb
 
 # Own Tensorboard class

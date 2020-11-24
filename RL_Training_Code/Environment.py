@@ -19,8 +19,8 @@ import carla
 from skimage.color import rgb2gray
 
 SHOW_PREVIEW = True
-IM_WIDTH = 640
-IM_HEIGHT = 480
+IM_WIDTH = 300 #640
+IM_HEIGHT = 240 #480
 SECONDS_PER_EPISODE = 30  # We need to on-ramp and drive. So increasing to 100
 
 
@@ -63,7 +63,7 @@ class CarEnv:
         self.rgb_cam = self.blueprint_library.find('sensor.camera.rgb')
         self.rgb_cam.set_attribute("image_size_x", f"{self.im_width}")
         self.rgb_cam.set_attribute("image_size_y", f"{self.im_height}")
-        self.rgb_cam.set_attribute("fov", f"110")
+        self.rgb_cam.set_attribute("fov", f"75") #Sentdex: 110
 
         transform = carla.Transform(carla.Location(x=2.5, z=0.7))
         self.sensor = self.world.spawn_actor(
