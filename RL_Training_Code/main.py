@@ -26,8 +26,6 @@ from tqdm import tqdm
 if __name__ == '__main__':
 
     FPS = 60 #60
-    # For stats
-    ep_rewards = [-200]
 
     # For more repetitive results
     random.seed(1)
@@ -55,9 +53,11 @@ if __name__ == '__main__':
 
     agent.get_qs(np.ones((env.im_height, env.im_width, 3))) #grayscale
 
+    # For stats
     # Iterate over episodes
-    scores = []
+    scores = [] #ep_rewards = [-200]
     avg_scores = []
+
     for episode in tqdm(range(1, EPISODES + 1), ascii=True, unit='episodes'):
 
             env.collision_hist = []
@@ -66,7 +66,7 @@ if __name__ == '__main__':
             env.lane_crossings = []
 
             # Restarting episode - reset episode reward and step number
-            score = 0
+            score = 0 #sentdex: episode_reward
             step = 1
 
             # Reset environment and get initial state
@@ -114,15 +114,17 @@ if __name__ == '__main__':
 
             if not episode % AGGREGATE_STATS_EVERY or episode == 1:
                 avg_scores.append(np.mean(scores[-AGGREGATE_STATS_EVERY:]))
-                average_reward = sum(ep_rewards[-AGGREGATE_STATS_EVERY:])/len(ep_rewards[-AGGREGATE_STATS_EVERY:])
-                min_reward = min(ep_rewards[-AGGREGATE_STATS_EVERY:])
-                max_reward = max(ep_rewards[-AGGREGATE_STATS_EVERY:])
+                average_reward = sum(scores[-AGGREGATE_STATS_EVERY:])/len(scores[-AGGREGATE_STATS_EVERY:])
+                min_reward = min(scores[-AGGREGATE_STATS_EVERY:])
+                max_reward = max(scores[-AGGREGATE_STATS_EVERY:])
                 agent.tensorboard.update_stats(reward_avg=average_reward, reward_min=min_reward, reward_max=max_reward, epsilon=epsilon)
 
 
-                 #Save model, but only when min reward is greater or equal a set value
-                if min_reward >= MIN_REWARD:
+                 #Save model, but only when min reward is greater or equal a set value #sentdex: min_reward...anand: average_reward
+                if average_reward >= MIN_REWARD:
                     agent.model.save(f'models/{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
+                else:
+                    print(f"[LOG] Average reward was {average_reward}, min reward was {min_reward} AND max_reward was {max_reward} ... Not saving")
 
             print('episode: ', episode, 'score %.2f' % score)
             # Decay epsilon
