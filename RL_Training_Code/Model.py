@@ -21,10 +21,6 @@ from threading import Thread
 from Environment import *
 
 
-SHOW_PREVIEW = False
-IM_WIDTH = 640
-IM_HEIGHT = 480
-
 REPLAY_MEMORY_SIZE = 5_000
 MIN_REPLAY_MEMORY_SIZE = 1_000
 MINIBATCH_SIZE = 16
@@ -46,6 +42,9 @@ MIN_EPSILON = 0.001
 AGGREGATE_STATS_EVERY = 10
 #backend._SYMBOLIC_SCOPE.value = True
 
+IM_WIDTH = 640
+IM_HEIGHT = 480
+INPUT_SHAPE = (IM_HEIGHT, IM_WIDTH, 3) #1 is single channel for grayscale, use 3 for rgb
 
 # Own Tensorboard class
 class ModifiedTensorBoard(TensorBoard):
@@ -99,16 +98,54 @@ class DQNAgent:
 
     def create_model(self):
 
-        IM_WIDTH = 640
-        IM_HEIGHT = 480
-        base_model = Xception(weights=None, include_top=False,
-                              input_shape=(IM_HEIGHT, IM_WIDTH, 3))
+        # Anand: default weights was None. Using "imagenet" weights
+        base_model = Xception(weights="imagenet", include_top=False,
+                              input_shape=INPUT_SHAPE) 
 
         x = base_model.output
         x = GlobalAveragePooling2D()(x)
 
         predictions = Dense(3, activation="linear")(x)
         model = Model(inputs=base_model.input, outputs=predictions)
+        model.compile(loss="mse", optimizer=Adam(
+            lr=0.001), metrics=["accuracy"])
+        return model
+
+    def create_model(self):
+
+        input = Input(shape=INPUT_SHAPE)
+
+        cnn_1 = Conv2D(64, (7, 7), padding='same')(input)
+        cnn_1a = Activation('relu')(cnn_1)
+        cnn_1c = Concatenate()([cnn_1a, input])
+        cnn_1ap = AveragePooling2D(pool_size=(5, 5), strides=(3, 3), padding='same')(cnn_1c)
+
+        cnn_2 = Conv2D(64, (5, 5), padding='same')(cnn_1ap)
+        cnn_2a = Activation('relu')(cnn_2)
+        cnn_2c = Concatenate()([cnn_2a, cnn_1ap])
+        cnn_2ap = AveragePooling2D(pool_size=(5, 5), strides=(3, 3), padding='same')(cnn_2c)
+
+        cnn_3 = Conv2D(128, (5, 5), padding='same')(cnn_2ap)
+        cnn_3a = Activation('relu')(cnn_3)
+        cnn_3c = Concatenate()([cnn_3a, cnn_2ap])
+        cnn_3ap = AveragePooling2D(pool_size=(5, 5), strides=(2, 2), padding='same')(cnn_3c)
+
+        cnn_4 = Conv2D(256, (5, 5), padding='same')(cnn_3ap)
+        cnn_4a = Activation('relu')(cnn_4)
+        cnn_4c = Concatenate()([cnn_4a, cnn_3ap])
+        cnn_4ap = AveragePooling2D(pool_size=(5, 5), strides=(2, 2), padding='same')(cnn_4c)
+
+        cnn_5 = Conv2D(512, (3, 3), padding='same')(cnn_4ap)
+        cnn_5a = Activation('relu')(cnn_5)
+        #cnn_5c = Concatenate()([cnn_5a, cnn_4ap])
+        cnn_5ap = AveragePooling2D(pool_size=(3, 3), strides=(2, 2), padding='same')(cnn_5a)
+
+        flatten = Flatten()(cnn_5ap)
+
+        #return input, flatten
+
+        predictions = Dense(3, activation="linear")(flatten) #grayscale. Dimensionality=1 or 3 for rgb
+        model = Model(inputs=input, outputs=predictions)
         model.compile(loss="mse", optimizer=Adam(
             lr=0.001), metrics=["accuracy"])
         return model
@@ -156,6 +193,8 @@ class DQNAgent:
             log_this_step = True
             self.last_log_episode = self.tensorboard.step
 
+        #X = rgb2gray(X)
+        
         with self.graph.as_default():
             self.model.fit(np.array(X)/255, np.array(y), batch_size=TRAINING_BATCH_SIZE,
                            verbose=0, shuffle=False, callbacks=[self.tensorboard] if log_this_step else None)
@@ -171,9 +210,8 @@ class DQNAgent:
         return self.model.predict(np.array(state).reshape(-1, *state.shape)/255)[0]
 
     def train_in_loop(self):
-        X = np.random.uniform(
-            size=(1, IM_HEIGHT, IM_WIDTH, 3)).astype(np.float32)
-        y = np.random.uniform(size=(1, 3)).astype(np.float32)
+        X = np.random.uniform(size=(1, IM_HEIGHT, IM_WIDTH, 3)).astype(np.float32) #grayscale index 3 is 1 for grayscale and 3 for rgb
+        y = np.random.uniform(size=(1, 3)).astype(np.float32) #grayscale (1,1), rgb (1,3)
         with self.graph.as_default():
             self.model.fit(X, y, verbose=False, batch_size=1)
 

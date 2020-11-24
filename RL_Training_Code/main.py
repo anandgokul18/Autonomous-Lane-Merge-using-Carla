@@ -25,7 +25,7 @@ from tqdm import tqdm
 
 if __name__ == '__main__':
 
-    FPS = 40 #60
+    FPS = 60 #60
     # For stats
     ep_rewards = [-200]
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     while not agent.training_initialized:
         time.sleep(0.01)
 
-    agent.get_qs(np.ones((env.im_height, env.im_width, 3)))
+    agent.get_qs(np.ones((env.im_height, env.im_width, 3))) #grayscale
 
     # Iterate over episodes
     scores = []

@@ -16,10 +16,12 @@ except IndexError:
     pass
 import carla
 
-SHOW_PREVIEW = False
+from skimage.color import rgb2gray
+
+SHOW_PREVIEW = True
 IM_WIDTH = 640
 IM_HEIGHT = 480
-SECONDS_PER_EPISODE = 40  # We need to on-ramp and drive. So increasing to 100
+SECONDS_PER_EPISODE = 30  # We need to on-ramp and drive. So increasing to 100
 
 
 class CarEnv:
@@ -106,6 +108,9 @@ class CarEnv:
         # print(i.shape)
         i2 = i.reshape((self.im_height, self.im_width, 4))
         i3 = i2[:, :, :3]
+
+        #grayscale = rgb2gray(i3)
+
         if self.SHOW_CAM:
             cv2.imshow("", i3)
             cv2.waitKey(1)
@@ -158,7 +163,7 @@ class CarEnv:
         new_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
         if on_ramp == True and str(new_lane.left_lane_marking.type) == 'Broken' and str(new_lane.right_lane_marking.type) == 'Solid':
             on_ramp = False
-            reward += 200
+            reward += 800
             self.first_lane_change_on_freeway = False
             print("[LOG] Ramp to freeway!")
             done = True ### Phase 1 training
@@ -171,9 +176,9 @@ class CarEnv:
                 for marking in clm:
                     #print(str(marking.type)) 
                     if str(marking.type) != 'Broken': #str(marking.type) == 'Solid' or str(marking.type) == 'SolidSolid' or str(marking.type) == 'Curb' or str(marking.type) == 'Other':
-                        reward += -100
+                        reward += -50
                         print(f"[LOG] {str(marking.type)} Crossed...Penalty")
-                        done = True
+                        done = False
                     elif self.first_lane_change_on_freeway == False and str(marking.type) == 'Broken':  # Rewarding the first change on the freeway
                         reward += 100
                         self.first_lane_change_on_freeway = True
