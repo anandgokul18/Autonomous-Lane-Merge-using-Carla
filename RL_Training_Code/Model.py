@@ -17,19 +17,21 @@ from keras.models import Model
 from keras.callbacks import TensorBoard
 import tensorflow as tf
 import keras.backend.tensorflow_backend as backend
+from tensorflow.python.keras.backend import set_session
+from tensorflow.python.keras.models import load_model
 from threading import Thread
 from Environment import *
 
 
-REPLAY_MEMORY_SIZE = 5_000
+REPLAY_MEMORY_SIZE = 50_000
 MIN_REPLAY_MEMORY_SIZE = 1_000
-MINIBATCH_SIZE = 16
+MINIBATCH_SIZE = 16 # How many steps to use for training
 PREDICTION_BATCH_SIZE = 1
 TRAINING_BATCH_SIZE = MINIBATCH_SIZE // 4
 UPDATE_TARGET_EVERY = 5
 MODEL_NAME = "Xception"
 
-MEMORY_FRACTION = 0.4
+MEMORY_FRACTION = 0.75
 MIN_REWARD = -200
 
 EPISODES = 1000
@@ -80,21 +82,43 @@ class ModifiedTensorBoard(TensorBoard):
 
 
 class DQNAgent:
-    def __init__(self):
-        self.model = self.create_model()
-        self.target_model = self.create_model()
-        self.target_model.set_weights(self.model.get_weights())
-
+    def __init__(self, loadExistingModel=None):
+        
         self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
 
         self.tensorboard = ModifiedTensorBoard(
             log_dir=f"logs/{MODEL_NAME}-{int(time.time())}")
         self.target_update_counter = 0
-        self.graph = tf.compat.v1.get_default_graph()
+    
+        # Adding it to instance, becaause sess is used in train_in_loop() as well
+        self.loadExistingModel = loadExistingModel
+        if self.loadExistingModel:
 
+            # adding session Ashwini
+            self.sess = tf.Session().__enter__()
+            self.graph = tf.compat.v1.get_default_graph()
+            set_session(self.sess)
+
+            self.model = self.load_model(loadExistingModel)
+            self.target_model = self.load_model(loadExistingModel)
+
+        else:
+
+            self.graph = tf.compat.v1.get_default_graph()
+
+            self.model = self.create_model()
+            self.target_model = self.create_model()
+        
+
+        
+        self.target_model.set_weights(self.model.get_weights())
         self.terminate = False
         self.last_logged_episode = 0
         self.training_initialized = False
+
+    def load_model(self, path):
+        model = tf.keras.models.load_model(path)
+        return model  
 
     def create_model(self):
 
@@ -111,6 +135,7 @@ class DQNAgent:
             lr=0.001), metrics=["accuracy"])
         return model
 
+    """
     def create_model(self):
 
         input = Input(shape=INPUT_SHAPE)
@@ -149,6 +174,7 @@ class DQNAgent:
         model.compile(loss="mse", optimizer=Adam(
             lr=0.001), metrics=["accuracy"])
         return model
+    """
 
     def update_replay_memory(self, transition):
         # transition = (current_state, action, reward, new_state, done)
@@ -163,12 +189,14 @@ class DQNAgent:
         current_states = np.array([transition[0]
                                    for transition in minibatch])/255
         with self.graph.as_default():
+            set_sess(self.sess)
             current_qs_list = self.model.predict(
                 current_states, PREDICTION_BATCH_SIZE)
 
         new_current_states = np.array(
             [transition[3] for transition in minibatch])/255
         with self.graph.as_default():
+            set_sess(self.sess)
             future_qs_list = self.target_model.predict(
                 new_current_states, PREDICTION_BATCH_SIZE)
 
@@ -213,6 +241,10 @@ class DQNAgent:
         X = np.random.uniform(size=(1, IM_HEIGHT, IM_WIDTH, 3)).astype(np.float32) #grayscale index 3 is 1 for grayscale and 3 for rgb
         y = np.random.uniform(size=(1, 3)).astype(np.float32) #grayscale (1,1), rgb (1,3)
         with self.graph.as_default():
+            
+            if self.loadExistingModel:
+                set_session(self.sess)
+            
             self.model.fit(X, y, verbose=False, batch_size=1)
 
         self.training_initialized = True

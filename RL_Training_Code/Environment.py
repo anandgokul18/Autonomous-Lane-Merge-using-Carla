@@ -50,17 +50,28 @@ class CarEnv:
         self.first_lane_change_on_freeway = True
         self.lane_crossings = []
 
-        desired_spawn_point = carla.Transform(carla.Location(-33.3, -87.5, 2), carla.Rotation(0, 44, 0))
+        #desired_spawn_point = carla.Transform(carla.Location(-34.3, -87.5, 2), carla.Rotation(0, 44, 0))
 
-        #desired_spawn_point = carla.Transform(carla.Location(-25.2, -78.7, 1), carla.Rotation(0, 57, 0))
+        desired_spawn_point = carla.Transform(carla.Location(-25.2, -78.7, 1), carla.Rotation(0, 57, 0))
+        
+        # desired_spawn_point = carla.Transform(carla.Location(-34.3, -200.5, 2), carla.Rotation(0, 44, 0))
 
-        self.vehicle = self.world.spawn_actor(self.model_3, desired_spawn_point)
+
+        self.vehicle = None
+        
+        try:
+            self.vehicle = self.world.spawn_actor(self.model_3, desired_spawn_point)
+        except Exception as e:
+            print(f"Error: {e}")
+            time.sleep(20)
+            self.vehicle = self.world.spawn_actor(self.model_3, desired_spawn_point)
+
 
         #self.transform = random.choice(self.world.get_map().get_spawn_points())
         #self.vehicle = self.world.spawn_actor(self.model_3, self.transform)
         self.actor_list.append(self.vehicle)
 
-        self.rgb_cam = self.blueprint_library.find('sensor.camera.rgb')
+        self.rgb_cam = self.blueprint_library.find('sensor.camera.semantic_segmentation')
         self.rgb_cam.set_attribute("image_size_x", f"{self.im_width}")
         self.rgb_cam.set_attribute("image_size_y", f"{self.im_height}")
         self.rgb_cam.set_attribute("fov", f"75") #Sentdex: 110
@@ -104,6 +115,10 @@ class CarEnv:
         self.lane_crossings.append(event)
 
     def process_img(self, image):
+
+        #Semantic segmentation
+        image.convert(carla.ColorConverter.CityScapesPalette)
+
         i = np.array(image.raw_data)
         # print(i.shape)
         i2 = i.reshape((self.im_height, self.im_width, 4))
@@ -151,6 +166,9 @@ class CarEnv:
             self.vehicle.apply_control(carla.VehicleControl(
                 throttle=0.1, steer=0, reverse= False, hand_brake=False))
             #print("[LOG] Action 4")
+        elif action==5: #full brake
+            self.vehicle.apply_control(carla.VehicleControl(
+                throttle=0, steer=0, brake=1, reverse= False, hand_brake=False))
 
         
 
@@ -159,16 +177,25 @@ class CarEnv:
 
         done = False
 
+        """
+        current_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
+        if str(current_lane.left_lane_marking.type) == 'Broken' or str(current_lane.right_lane_marking.type) == 'Broken':
+            on_ramp = False
+        """
+
+        """
         # Going from ramp to freeway
         new_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
         if on_ramp == True and str(new_lane.left_lane_marking.type) == 'Broken' and str(new_lane.right_lane_marking.type) == 'Solid':
             on_ramp = False
-            reward += 800
+            reward += 1500
             self.first_lane_change_on_freeway = False
             print("[LOG] Ramp to freeway!")
-            done = True ### Phase 1 training
+            done = False ### Phase 1 training
+        """
         
         
+        """
         # TODO NOTE Need to optimize this code so that we dont iterate over entire list everytime!
         if len(self.lane_crossings) != 0:
             for x in self.lane_crossings:
@@ -176,27 +203,37 @@ class CarEnv:
                 for marking in clm:
                     #print(str(marking.type)) 
                     if str(marking.type) != 'Broken': #str(marking.type) == 'Solid' or str(marking.type) == 'SolidSolid' or str(marking.type) == 'Curb' or str(marking.type) == 'Other':
-                        reward += -50
+                        reward += -25
                         print(f"[LOG] {str(marking.type)} Crossed...Penalty")
                         done = False
+                        '''
                     elif self.first_lane_change_on_freeway == False and str(marking.type) == 'Broken':  # Rewarding the first change on the freeway
-                        reward += 100
+                        reward += 500
                         self.first_lane_change_on_freeway = True
                         print("[LOG] First lane change on freeway")
-                    else: # Penalizing unnecessary lane changes
-                        reward += -10
-                        print("[LOG] Lane Change penalty")
+                        done = False
+                        '''
+                    if on_ramp and str(marking.type) == 'Broken':  # Rewarding the merging as one single operation
+                        reward += 500
+                        on_ramp = False
+                        print("[LOG] Merge successful")
+                        done = False
+                    #else: # Penalizing unnecessary lane changes
+                    #    reward += 0 #-10 #Phase 1 ...not penalizing broken changes
+                        #print("[LOG] Lane Change penalty")
+        """
 
         if len(self.collision_hist) != 0:
             done = True
             print("[LOG] Collided...Done")
-            reward += -200
+            if on_ramp:
+                reward += -1000 #penalizing heavily to stop q values from doing only right on onramp
+            else:
+                reward += -200
 
         if done == False:
             if kmh < 50:
-                #Phase 1...No speed incentive
-                #reward += -1
-                pass
+                reward += -1
             elif kmh >= 50:
                 reward += 1
 

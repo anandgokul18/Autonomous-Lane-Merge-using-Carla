@@ -33,7 +33,7 @@ if __name__ == '__main__':
     tf.compat.v1.set_random_seed(1)
 
     # Memory fraction, used mostly when trai8ning multiple agents
-    gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.5)
+    gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.75)
     tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(gpu_options=gpu_options)))
 
     # Create models folder
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         os.makedirs('models')
 
     # Create agent and environment
-    agent = DQNAgent()
+    agent = DQNAgent(loadExistingModel=None)
     env = CarEnv()
 
 
@@ -84,8 +84,8 @@ if __name__ == '__main__':
                     # Get action from Q table
                     action = np.argmax(agent.get_qs(current_state))
                 else:
-                    # Get random action every epsilon to try out new moves... we have 4 actions allowed... CHANGE IF MORE ACTIONS
-                    action = np.random.randint(0, 4)
+                    # Get random action every epsilon to try out new moves... we have 5 actions allowed... CHANGE IF MORE ACTIONS
+                    action = np.random.randint(0, 5)
                     #action = random.choices(population=[0,1,2,3,4],weights=[0.2,0.3,0.2,0.2,0.1],k=1)[0] # Logic: Going straight is more important
                     # This takes no time, so we add a delay matching 60 FPS (prediction above takes longer)
                     time.sleep(1/FPS)
