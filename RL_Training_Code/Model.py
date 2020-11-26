@@ -23,9 +23,9 @@ from threading import Thread
 from Environment import *
 
 
-REPLAY_MEMORY_SIZE = 50_000
-MIN_REPLAY_MEMORY_SIZE = 1_000
-MINIBATCH_SIZE = 16 # How many steps to use for training
+REPLAY_MEMORY_SIZE = 500_000
+MIN_REPLAY_MEMORY_SIZE = 10_000
+MINIBATCH_SIZE = 64 # How many steps to use for training
 PREDICTION_BATCH_SIZE = 1
 TRAINING_BATCH_SIZE = MINIBATCH_SIZE // 4
 UPDATE_TARGET_EVERY = 5

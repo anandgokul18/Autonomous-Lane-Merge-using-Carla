@@ -38,8 +38,8 @@ class CarEnv:
         self.client.set_timeout(60.0)
         
         # FIRST do client.load_world(), then, do get_world()
-        self.world = self.client.get_world()
-        #self.world = self.client.load_world('Town04')
+        #self.world = self.client.get_world()
+        self.world = self.client.load_world('Town04')
 
         self.blueprint_library = self.world.get_blueprint_library()
         self.model_3 = self.blueprint_library.filter("model3")[0]
@@ -139,7 +139,7 @@ class CarEnv:
         reward = 0
 
         # Survival reward
-        reward += 1 #+1 for each survival step
+        reward += 2 #+1 for each survival step
 
         current_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
         if str(current_lane.left_lane_marking.type) == 'Solid' and str(current_lane.right_lane_marking.type) == 'Solid':
@@ -154,6 +154,7 @@ class CarEnv:
             self.vehicle.apply_control(
                 carla.VehicleControl(throttle=1.0, steer=0, reverse= False, hand_brake=False))
             #print("[LOG] Action 1")
+            reward += 10
         elif action == 2:  # full throttle right
             self.vehicle.apply_control(carla.VehicleControl(
                 throttle=1.0, steer=0.25*self.STEER_AMT, reverse= False, hand_brake=False))
@@ -162,10 +163,12 @@ class CarEnv:
             self.vehicle.apply_control(carla.VehicleControl(
                 throttle=0.5, steer=0, reverse= False, hand_brake=False))
             #print("[LOG] Action 3")
+            reward += 5
         elif action == 4:  # crawl straight
             self.vehicle.apply_control(carla.VehicleControl(
                 throttle=0.1, steer=0, reverse= False, hand_brake=False))
             #print("[LOG] Action 4")
+            reward += 2
         elif action==5: #full brake
             self.vehicle.apply_control(carla.VehicleControl(
                 throttle=0, steer=0, brake=1, reverse= False, hand_brake=False))
@@ -181,6 +184,7 @@ class CarEnv:
         current_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
         if str(current_lane.left_lane_marking.type) == 'Broken' or str(current_lane.right_lane_marking.type) == 'Broken':
             on_ramp = False
+            reward += 100
         
 
         
@@ -188,7 +192,7 @@ class CarEnv:
         new_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
         if on_ramp == True and str(new_lane.left_lane_marking.type) == 'Broken' and str(new_lane.right_lane_marking.type) == 'Solid':
             on_ramp = False
-            reward += 800
+            reward += 600
             self.first_lane_change_on_freeway = False
             print("[LOG] Ramp to freeway!")
             done = False ### Phase 1 training
@@ -231,11 +235,11 @@ class CarEnv:
             else:
                 reward += -200
 
-        # if done == False:
-        #     if kmh < 50:
-        #         reward += -1
-        #     elif kmh >= 50:
-        #         reward += 1
+        if done == False:
+            if kmh < 50:
+                reward += -1
+            elif kmh >= 50:
+                reward += 1
 
         if self.episode_start + SECONDS_PER_EPISODE < time.time():
             done = True
