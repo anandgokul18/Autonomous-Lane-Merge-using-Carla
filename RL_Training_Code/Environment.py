@@ -177,22 +177,22 @@ class CarEnv:
 
         done = False
 
-        """
+        
         current_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
         if str(current_lane.left_lane_marking.type) == 'Broken' or str(current_lane.right_lane_marking.type) == 'Broken':
             on_ramp = False
-        """
+        
 
-        """
+        
         # Going from ramp to freeway
         new_lane = self.vehicle.get_world().get_map().get_waypoint(self.vehicle.get_location())
         if on_ramp == True and str(new_lane.left_lane_marking.type) == 'Broken' and str(new_lane.right_lane_marking.type) == 'Solid':
             on_ramp = False
-            reward += 1500
+            reward += 800
             self.first_lane_change_on_freeway = False
             print("[LOG] Ramp to freeway!")
             done = False ### Phase 1 training
-        """
+        
         
         
         """
@@ -231,11 +231,11 @@ class CarEnv:
             else:
                 reward += -200
 
-        if done == False:
-            if kmh < 50:
-                reward += -1
-            elif kmh >= 50:
-                reward += 1
+        # if done == False:
+        #     if kmh < 50:
+        #         reward += -1
+        #     elif kmh >= 50:
+        #         reward += 1
 
         if self.episode_start + SECONDS_PER_EPISODE < time.time():
             done = True
