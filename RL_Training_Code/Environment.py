@@ -18,7 +18,7 @@ import carla
 
 from skimage.color import rgb2gray
 
-SHOW_PREVIEW = True
+SHOW_PREVIEW = False
 IM_WIDTH = 300 #640
 IM_HEIGHT = 240 #480
 SECONDS_PER_EPISODE = 30  # We need to on-ramp and drive. So increasing to 100
