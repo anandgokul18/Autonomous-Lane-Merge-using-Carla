@@ -125,12 +125,12 @@ if __name__ == '__main__':
             if average_reward >= MIN_REWARD:
 
                 currentdir = os.getcwd()
-                modelsdir = currentdir + "/models"
-                numfiles = len(os.listdir(modelsdir))
+                path = currentdir + "/models"
+                numfiles = len(os.listdir(path))
                 for f in os.listdir(path):
-                    # Deleting files older than 12 hours if number of files is greater than 25
-                    if os.stat(os.path.join(path,f)).st_mtime < now - (12*60*60) and numfiles > 25:
-                        os.remove(os.path.join(path,f))
+                    # Deleting files older than 4 hours if number of files is greater than 25
+                    if os.stat(os.path.join(path, f)).st_mtime < time.time() - (4*60*60) and numfiles > 25:
+                        os.remove(os.path.join(path, f))
 
                 agent.model.save(
                     f'models/{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
