@@ -229,7 +229,7 @@ class CarEnv:
                     '''
 
                     print(f"[LOG] {str(marking.type)} Crossed...Penalty")
-                    reward += -5
+                    reward += -2
 
         if len(self.collision_hist) != 0:
             done = True
