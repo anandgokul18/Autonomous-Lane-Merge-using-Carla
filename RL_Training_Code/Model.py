@@ -25,18 +25,18 @@ from Environment import *
 
 REPLAY_MEMORY_SIZE = 500_000
 MIN_REPLAY_MEMORY_SIZE = 10_000
-MINIBATCH_SIZE = 64 # How many steps to use for training
+MINIBATCH_SIZE = 64  # How many steps to use for training
 PREDICTION_BATCH_SIZE = 1
 TRAINING_BATCH_SIZE = MINIBATCH_SIZE // 4
 UPDATE_TARGET_EVERY = 5
 MODEL_NAME = "Xception"
 
 MEMORY_FRACTION = 0.75
-MIN_REWARD = -200
+MIN_REWARD = -100
 
 EPISODES = 100000
 
-DISCOUNT = 0.99
+DISCOUNT = 0.8
 epsilon = 1
 EPSILON_DECAY = 0.95  # 0.9975 99975
 MIN_EPSILON = 0.001
@@ -44,11 +44,14 @@ MIN_EPSILON = 0.001
 AGGREGATE_STATS_EVERY = 10
 #backend._SYMBOLIC_SCOPE.value = True
 
-IM_WIDTH = 300 #640
-IM_HEIGHT = 240 #480
-INPUT_SHAPE = (IM_HEIGHT, IM_WIDTH, 3) #1 is single channel for grayscale, use 3 for rgb
+IM_WIDTH = 300  # 640
+IM_HEIGHT = 240  # 480
+# 1 is single channel for grayscale, use 3 for rgb
+INPUT_SHAPE = (IM_HEIGHT, IM_WIDTH, 3)
 
 # Own Tensorboard class
+
+
 class ModifiedTensorBoard(TensorBoard):
 
     # Overriding init to set initial step and writer (we want one log file for all .fit() calls)
@@ -83,13 +86,13 @@ class ModifiedTensorBoard(TensorBoard):
 
 class DQNAgent:
     def __init__(self, loadExistingModel=None):
-        
+
         self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
 
         self.tensorboard = ModifiedTensorBoard(
             log_dir=f"logs/{MODEL_NAME}-{int(time.time())}")
         self.target_update_counter = 0
-    
+
         # Adding it to instance, becaause sess is used in train_in_loop() as well
         self.loadExistingModel = loadExistingModel
         if self.loadExistingModel:
@@ -108,9 +111,7 @@ class DQNAgent:
 
             self.model = self.create_model()
             self.target_model = self.create_model()
-        
 
-        
         self.target_model.set_weights(self.model.get_weights())
         self.terminate = False
         self.last_logged_episode = 0
@@ -118,13 +119,13 @@ class DQNAgent:
 
     def load_model(self, path):
         model = tf.keras.models.load_model(path)
-        return model  
+        return model
 
     def create_model(self):
 
         # Anand: default weights was None. Using "imagenet" weights
         base_model = Xception(weights="imagenet", include_top=False,
-                              input_shape=INPUT_SHAPE) 
+                              input_shape=INPUT_SHAPE)
 
         x = base_model.output
         x = GlobalAveragePooling2D()(x)
@@ -222,7 +223,7 @@ class DQNAgent:
             self.last_log_episode = self.tensorboard.step
 
         #X = rgb2gray(X)
-        
+
         with self.graph.as_default():
             self.model.fit(np.array(X)/255, np.array(y), batch_size=TRAINING_BATCH_SIZE,
                            verbose=0, shuffle=False, callbacks=[self.tensorboard] if log_this_step else None)
@@ -238,13 +239,15 @@ class DQNAgent:
         return self.model.predict(np.array(state).reshape(-1, *state.shape)/255)[0]
 
     def train_in_loop(self):
-        X = np.random.uniform(size=(1, IM_HEIGHT, IM_WIDTH, 3)).astype(np.float32) #grayscale index 3 is 1 for grayscale and 3 for rgb
-        y = np.random.uniform(size=(1, 3)).astype(np.float32) #grayscale (1,1), rgb (1,3)
+        X = np.random.uniform(size=(1, IM_HEIGHT, IM_WIDTH, 3)).astype(
+            np.float32)  # grayscale index 3 is 1 for grayscale and 3 for rgb
+        y = np.random.uniform(size=(1, 3)).astype(
+            np.float32)  # grayscale (1,1), rgb (1,3)
         with self.graph.as_default():
-            
+
             if self.loadExistingModel:
                 set_session(self.sess)
-            
+
             self.model.fit(X, y, verbose=False, batch_size=1)
 
         self.training_initialized = True
