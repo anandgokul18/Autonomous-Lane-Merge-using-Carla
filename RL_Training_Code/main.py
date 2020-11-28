@@ -123,6 +123,15 @@ if __name__ == '__main__':
 
             # Save model, but only when min reward is greater or equal a set value #sentdex: min_reward...anand: average_reward
             if average_reward >= MIN_REWARD:
+
+                currentdir = os.getcwd()
+                modelsdir = currentdir + "/models"
+                numfiles = len(os.listdir(modelsdir))
+                for f in os.listdir(path):
+                    # Deleting files older than 12 hours if number of files is greater than 25
+                    if os.stat(os.path.join(path,f)).st_mtime < now - (12*60*60) and numfiles > 25:
+                        os.remove(os.path.join(path,f))
+
                 agent.model.save(
                     f'models/{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
             else:
@@ -139,7 +148,7 @@ if __name__ == '__main__':
     agent.terminate = True
     trainer_thread.join()
     agent.model.save(
-        f'models/{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
+        f'models/FINAL_{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
 
     fig = plt.figure()
     ax = fig.add_subplot(111)

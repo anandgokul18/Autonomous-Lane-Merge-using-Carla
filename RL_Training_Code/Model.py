@@ -23,7 +23,7 @@ from threading import Thread
 from Environment import *
 
 
-REPLAY_MEMORY_SIZE = 500_000
+REPLAY_MEMORY_SIZE = 50_000
 MIN_REPLAY_MEMORY_SIZE = 10_000
 MINIBATCH_SIZE = 64  # How many steps to use for training
 PREDICTION_BATCH_SIZE = 1
@@ -36,7 +36,7 @@ MIN_REWARD = -100
 
 EPISODES = 100000
 
-DISCOUNT = 0.8
+DISCOUNT = 0.9
 epsilon = 1
 EPSILON_DECAY = 0.95  # 0.9975 99975
 MIN_EPSILON = 0.001
