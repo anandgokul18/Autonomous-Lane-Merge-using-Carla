@@ -18,7 +18,7 @@ import carla
 
 from skimage.color import rgb2gray
 
-SHOW_PREVIEW = True
+SHOW_PREVIEW = False
 IM_WIDTH = 300  # 640
 IM_HEIGHT = 240  # 480
 SECONDS_PER_EPISODE = 30  # We need to on-ramp and drive. So increasing to 100
@@ -141,7 +141,6 @@ class CarEnv:
 
         # Starting reward for current step.
         #reward = 0
-
         """
         current_lane = self.vehicle.get_world().get_map(
         ).get_waypoint(self.vehicle.get_location())
@@ -230,7 +229,8 @@ class CarEnv:
 
                     #print(f"[LOG] {str(marking.type)} Crossed...Penalty")
                     #reward += -2
-                    reward += 0
+                    #reward += 0
+                    pass
 
         if len(self.collision_hist) != 0:
             done = True
@@ -244,10 +244,10 @@ class CarEnv:
             reward = -200
         elif kmh < 50:
             done = False
-            reward = -1
+            reward = 1
         else:
             done = False
-            reward = 1
+            reward = 4
 
         """
         # Survival reward and speed check
