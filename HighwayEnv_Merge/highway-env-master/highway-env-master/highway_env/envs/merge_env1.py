@@ -34,9 +34,9 @@ class MergeEnv1(AbstractEnv):
         :return: the reward of the state-action transition
         """
         if onramp == True:
-            action_reward = {0: self.COLLISION_REWARD,
+            action_reward = {0: 0.5,
                          1: 0,
-                         2: 0.5,
+                         2: 0,
                          3: 0,
                          4: 0}
         else:
@@ -45,7 +45,7 @@ class MergeEnv1(AbstractEnv):
                             2: self.LANE_CHANGE_REWARD,
                             3: 0,
                             4: 0}
-        if action == 2:
+        if action == 0:
             onramp = False
         reward = self.COLLISION_REWARD * self.vehicle.crashed \
                  + self.RIGHT_LANE_REWARD * self.vehicle.lane_index[2] / 1 \
