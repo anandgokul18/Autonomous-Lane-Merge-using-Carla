@@ -14,7 +14,7 @@ class QLearningAgent:
         self.epsilon = 1.0  # exploration rate
         self.epsilon_decay = 0.995  # the decay of epsilon after each training batch
         self.epsilon_min = 0.1  # the minimum exploration rate permissible
-        self.batch_size = 32  # maximum size of the batches sampled from memory
+        self.batch_size = 64  # maximum size of the batches sampled from memory
 
         # agent state
         self.model = self.build_model()
