@@ -25,7 +25,7 @@ from tqdm import tqdm
 
 if __name__ == '__main__':
 
-    FPS = 60  # 60
+    FPS = 20  # 60
 
     # For more repetitive results
     random.seed(1)
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     tf.compat.v1.set_random_seed(1)
 
     # Memory fraction, used mostly when trai8ning multiple agents
-    gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.75)
+    gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.95)
     tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(
         config=tf.compat.v1.ConfigProto(gpu_options=gpu_options)))
 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
         os.makedirs('models')
 
     # Create agent and environment
-    agent = DQNAgent(loadExistingModel=None)
+    agent = DQNAgent(loadExistingModel='/opt/carla-simulator/PythonAPI/examples/models/Xception_____2.00max__-16.60avg_-179.00min__1606864721.model', epsilonVal=0.7) #epsilon changing needs to be done manually on line 40 of Model.py
     env = CarEnv()
 
     # Start training thread and wait for training to be initialized
@@ -85,7 +85,7 @@ if __name__ == '__main__':
                 action = np.argmax(agent.get_qs(current_state))
             else:
                 # Get random action every epsilon to try out new moves... we have 4 actions allowed... CHANGE IF MORE ACTIONS
-                action = np.random.randint(0, 4)
+                action = np.random.randint(0, 3)
                 # action = random.choices(population=[0,1,2,3,4],weights=[0.2,0.3,0.2,0.2,0.1],k=1)[0] # Logic: Going straight is more important
                 # This takes no time, so we add a delay matching 60 FPS (prediction above takes longer)
                 time.sleep(1/FPS)
@@ -128,12 +128,13 @@ if __name__ == '__main__':
                 path = currentdir + "/models"
                 numfiles = len(os.listdir(path))
                 for f in os.listdir(path):
-                    # Deleting files older than 4 hours if number of files is greater than 25
-                    if os.stat(os.path.join(path, f)).st_mtime < time.time() - (4*60*60) and numfiles > 25:
-                        os.remove(os.path.join(path, f))
+                    # Deleting files older than 12 hours if number of files is greater than 25
+                    if os.stat(os.path.join(path,f)).st_mtime < time.time() - (12*60*60) and numfiles > 25:
+                        os.remove(os.path.join(path,f))
 
+                print(f"Saving model. The epsilon value was {epsilon}")
                 agent.model.save(
-                    f'models/{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
+                    f'models/{MODEL_NAME}__epsilon_{epsilon}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
             else:
                 print(
                     f"[LOG] Average reward was {average_reward}, min reward was {min_reward} AND max_reward was {max_reward} ... Not saving")
@@ -148,7 +149,7 @@ if __name__ == '__main__':
     agent.terminate = True
     trainer_thread.join()
     agent.model.save(
-        f'models/FINAL_{MODEL_NAME}__{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
+        f'models/FINAL_{MODEL_NAME}__epsilon_{epsilon}_{max_reward:_>7.2f}max_{average_reward:_>7.2f}avg_{min_reward:_>7.2f}min__{int(time.time())}.model')
 
     fig = plt.figure()
     ax = fig.add_subplot(111)

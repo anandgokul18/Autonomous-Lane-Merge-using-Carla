@@ -25,19 +25,19 @@ from Environment import *
 
 REPLAY_MEMORY_SIZE = 50_000
 MIN_REPLAY_MEMORY_SIZE = 10_000
-MINIBATCH_SIZE = 64  # How many steps to use for training
+MINIBATCH_SIZE = 32  # How many steps to use for training
 PREDICTION_BATCH_SIZE = 1
 TRAINING_BATCH_SIZE = MINIBATCH_SIZE // 4
 UPDATE_TARGET_EVERY = 5
 MODEL_NAME = "Xception"
 
-MEMORY_FRACTION = 0.75
-MIN_REWARD = -100
+MEMORY_FRACTION = 0.95
+MIN_REWARD = -180
 
 EPISODES = 100000
 
 DISCOUNT = 0.9
-epsilon = 1
+epsilon =0.7 #When starting= 1
 EPSILON_DECAY = 0.95  # 0.9975 99975
 MIN_EPSILON = 0.001
 
@@ -85,7 +85,7 @@ class ModifiedTensorBoard(TensorBoard):
 
 
 class DQNAgent:
-    def __init__(self, loadExistingModel=None):
+    def __init__(self, loadExistingModel=None, epsilonVal=1):
 
         self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
 
@@ -97,6 +97,8 @@ class DQNAgent:
         self.loadExistingModel = loadExistingModel
         if self.loadExistingModel:
 
+            print("Loading existing model...")
+            
             # adding session Ashwini
             self.sess = tf.Session().__enter__()
             self.graph = tf.compat.v1.get_default_graph()
@@ -104,6 +106,9 @@ class DQNAgent:
 
             self.model = self.load_model(loadExistingModel)
             self.target_model = self.load_model(loadExistingModel)
+
+            global epsilon
+            epsilon = epsilonVal
 
         else:
 
@@ -124,7 +129,7 @@ class DQNAgent:
     def create_model(self):
 
         # Anand: default weights was None. Using "imagenet" weights
-        base_model = Xception(weights="imagenet", include_top=False,
+        base_model = Xception(weights=None, include_top=False,
                               input_shape=INPUT_SHAPE)
 
         x = base_model.output

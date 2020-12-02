@@ -36,7 +36,7 @@ class CarEnv:
 
     def __init__(self):
         self.client = carla.Client("127.0.0.1", 2000)
-        self.client.set_timeout(30.0)
+        self.client.set_timeout(60.0)
 
         # FIRST do client.load_world(), then, do get_world()
         # self.world = self.client.get_world()
@@ -74,8 +74,8 @@ class CarEnv:
         # self.vehicle = self.world.spawn_actor(self.model_3, self.transform)
         self.actor_list.append(self.vehicle)
 
-        self.rgb_cam = self.blueprint_library.find(
-            'sensor.camera.semantic_segmentation')
+        # self.rgb_cam = self.blueprint_library.find('sensor.camera.semantic_segmentation')
+        self.rgb_cam = self.blueprint_library.find('sensor.camera.rgb')
         self.rgb_cam.set_attribute("image_size_x", f"{self.im_width}")
         self.rgb_cam.set_attribute("image_size_y", f"{self.im_height}")
         self.rgb_cam.set_attribute("fov", f"75")  # Sentdex: 110
@@ -96,12 +96,14 @@ class CarEnv:
         self.actor_list.append(self.colsensor)
         self.colsensor.listen(lambda event: self.collision_data(event))
 
+        """
         lanedetectsensor = self.blueprint_library.find(
             "sensor.other.lane_invasion")  # or sensor.other.lane_invasion
         self.lanedetectsensor = self.world.spawn_actor(
             lanedetectsensor, transform, attach_to=self.vehicle)
         self.actor_list.append(self.lanedetectsensor)
         self.lanedetectsensor.listen(lambda event: self.lane_crossing(event))
+        """
 
         while self.front_camera is None:
             time.sleep(0.01)
@@ -121,7 +123,7 @@ class CarEnv:
     def process_img(self, image):
 
         # Semantic segmentation
-        image.convert(carla.ColorConverter.CityScapesPalette)
+        # image.convert(carla.ColorConverter.CityScapesPalette)
 
         i = np.array(image.raw_data)
         # print(i.shape)
@@ -141,6 +143,7 @@ class CarEnv:
 
         # Starting reward for current step.
         #reward = 0
+
         """
         current_lane = self.vehicle.get_world().get_map(
         ).get_waypoint(self.vehicle.get_location())
